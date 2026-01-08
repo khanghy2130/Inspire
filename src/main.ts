@@ -3,6 +3,7 @@ import _p5_ from "p5"
 import Render from "./Render"
 import Gameplay from "./Gameplay"
 import { customFont } from "./font";
+import Loader from "./Loader";
 
 
 
@@ -11,15 +12,15 @@ export default class GameClient {
 	mx: number = 0
 	my: number = 0
 	touchCountdown: number = 0
-	helpImages: P5.Image[] = []
 
 	constructor() {
 		const render = new Render(this)
 		const gameplay = new Gameplay(this)
+		const loader = new Loader()
 
 		const sketch = (p5: _p5_) => {
 			const getCanvasSize = () => {
-				const HEIGHT_RATIO = 1.5
+				const HEIGHT_RATIO = 1
 				const CANVAS_WIDTH = Math.min(
 					window.innerWidth,
 					window.innerHeight / HEIGHT_RATIO
@@ -51,12 +52,23 @@ export default class GameClient {
 
 
 				// connect instances
+				loader.p5 = p5
 				render.p5 = p5
 				render.gameplay = gameplay
 				gameplay.render = render
 
 				gameplay.setUpNewGame()
 			}
+
+			/* ///$ ctx for drawing avatars
+			var ctx;
+			draw = function() {
+				if (!loader.isLoaded && !ctx){
+					ctx = this.externals.context;
+				}
+    	}
+			*/
+    
 
 			p5.draw = () => {
 				this.touchCountdown-- // update input delay
