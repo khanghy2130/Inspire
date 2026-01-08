@@ -1,16 +1,13 @@
 import GameClient from "./main"
-import Render from "./Render"
+import PlayScene from "./PlayScene"
 
 export default class Gameplay {
   gc: GameClient
-  render!: Render
+  playScene!: PlayScene
 
   constructor(gameClient: GameClient) {
     this.gc = gameClient
   }
 
-  setUpNewGame(){
-    
-  }
-
+  setUpNewGame() {}
 }

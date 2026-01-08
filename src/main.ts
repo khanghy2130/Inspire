@@ -1,99 +1,141 @@
 import type P5 from "p5"
 import _p5_ from "p5"
-import Render from "./Render"
+import PlayScene from "./PlayScene"
+import MenuScene from "./MenuScene"
 import Gameplay from "./Gameplay"
-import { customFont } from "./font";
-import Loader from "./Loader";
-
-
+import { customFont } from "./font"
+import LoadScene from "./LoadScene"
+import SceneController from "./SceneController"
 
 export default class GameClient {
-	// rescaled mouse position (0 to 400 width)
-	mx: number = 0
-	my: number = 0
-	touchCountdown: number = 0
+  // rescaled mouse position (0 to 400 width)
+  mx: number = 0
+  my: number = 0
+  touchCountdown: number = 0
+  avatarSheet?: P5.Image
 
-	constructor() {
-		const render = new Render(this)
-		const gameplay = new Gameplay(this)
-		const loader = new Loader()
+  constructor() {
+    const loadScene = new LoadScene()
+    const menuScene = new MenuScene(this)
+    const playScene = new PlayScene(this)
+    const gameplay = new Gameplay(this)
+    const sceneController = new SceneController()
 
-		const sketch = (p5: _p5_) => {
-			const getCanvasSize = () => {
-				const HEIGHT_RATIO = 1
-				const CANVAS_WIDTH = Math.min(
-					window.innerWidth,
-					window.innerHeight / HEIGHT_RATIO
-				)
-				return [CANVAS_WIDTH, CANVAS_WIDTH * HEIGHT_RATIO]
-			}
+    const sketch = (p5: _p5_) => {
+      const getCanvasSize = () => {
+        const HEIGHT_RATIO = 1
+        const CANVAS_WIDTH = Math.min(
+          window.innerWidth,
+          window.innerHeight / HEIGHT_RATIO
+        )
+        return [CANVAS_WIDTH, CANVAS_WIDTH * HEIGHT_RATIO]
+      }
 
-			p5.windowResized = () => {
-				const [w, h] = getCanvasSize()
-				p5.resizeCanvas(w, h)
-			}
+      p5.windowResized = () => {
+        const [w, h] = getCanvasSize()
+        p5.resizeCanvas(w, h)
+      }
 
-			p5.setup = () => {
-				const [w, h] = getCanvasSize()
-				p5.createCanvas(
-					w,
-					h,
-					p5.P2D,
-					document.getElementById("game-canvas") as HTMLCanvasElement
-				)
+      p5.preload = () => {
+        this.avatarSheet = p5.loadImage("./assets/avatars.webp")
+      }
 
-				// p5 configs
-				p5.textAlign(p5.CENTER, p5.CENTER)
-				p5.rectMode(p5.CENTER)
-				p5.imageMode(p5.CENTER)
-				p5.angleMode(p5.RADIANS)
-				p5.strokeJoin(p5.ROUND)
-				p5.frameRate(60)
+      p5.setup = () => {
+        const [w, h] = getCanvasSize()
+        p5.createCanvas(
+          w,
+          h,
+          p5.P2D,
+          document.getElementById("game-canvas") as HTMLCanvasElement
+        )
 
+        // p5 configs
+        p5.textAlign(p5.CENTER, p5.CENTER)
+        p5.rectMode(p5.CENTER)
+        p5.imageMode(p5.CENTER)
+        p5.angleMode(p5.RADIANS)
+        p5.strokeJoin(p5.ROUND)
+        p5.frameRate(60)
 
-				// connect instances
-				loader.p5 = p5
-				render.p5 = p5
-				render.gameplay = gameplay
-				gameplay.render = render
+        // connect instances
+        loadScene.p5 = p5
+        menuScene.p5 = p5
+        playScene.p5 = p5
+        sceneController.p5 = p5
 
-				gameplay.setUpNewGame()
-			}
+        playScene.gameplay = gameplay
+        gameplay.playScene = playScene
 
-			/* ///$ ctx for drawing avatars
+        loadScene.start()
+      }
+
+      /* ///$ ctx for drawing avatars
 			var ctx;
 			draw = function() {
-				if (!loader.isLoaded && !ctx){
-					ctx = this.externals.context;
+				if (!loader.isLoaded){
+					if (!ctx){
+						ctx = this.externals.context;
+					}
 				}
     	}
 			*/
-    
 
-			p5.draw = () => {
-				this.touchCountdown-- // update input delay
-				// rescale canvas and mouse position
-				this.mx = (p5.mouseX * 400) / p5.width
-				this.my = (p5.mouseY * 400) / p5.width
-				p5.scale(p5.width / 400)
+      p5.draw = () => {
+        this.touchCountdown-- // update input delay
+        // rescale canvas and mouse position
+        this.mx = (p5.mouseX * 600) / p5.width
+        this.my = (p5.mouseY * 600) / p5.width
+        p5.scale(p5.width / 600)
 
-				p5.clear()
-				render.draw()
-			}
-			p5.touchEnded = () => {
-				if (this.touchCountdown > 0) return
-				else this.touchCountdown = 5
+        p5.clear()
 
-				render.click()
-			}
+        p5.background(50)
+        const cardIndex = Math.floor(p5.frameCount * 0.05) % 32
+        p5.image(
+          this.avatarSheet!,
+          300,
+          300,
+          200,
+          200,
+          200 * (cardIndex % 4),
+          200 * Math.floor(cardIndex / 4),
+          200,
+          200
+        )
+        p5.noFill()
+        p5.stroke(200)
+        p5.square(300, 300, 200)
 
-			p5.keyPressed = () => {
-				render.keyPressed()
-			}
-		}
+        switch (sceneController.scene) {
+          case "LOAD":
+            loadScene.update()
+            loadScene.draw()
+            return
+          case "MENU":
+            menuScene.draw()
+            return
+          case "PLAY":
+            playScene.draw()
+            return
+        }
+      }
+      p5.touchEnded = () => {
+        if (this.touchCountdown > 0) return
+        else this.touchCountdown = 5
 
-		new _p5_(sketch)
-	}
+        switch (sceneController.scene) {
+          case "MENU":
+            menuScene.click()
+            return
+          case "PLAY":
+            playScene.click()
+            return
+        }
+      }
+    }
+
+    new _p5_(sketch)
+  }
 }
 
 new GameClient()

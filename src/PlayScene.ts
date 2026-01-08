@@ -5,8 +5,7 @@ import { customFont } from "./font"
 
 export type PositionType = [number, number]
 
-
-export default class Render {
+export default class PlayScene {
   gc: GameClient
   p5!: P5
   gameplay!: Gameplay
@@ -14,7 +13,6 @@ export default class Render {
     this.gc = gameClient
   }
 
-  
   draw() {
     const { p5, gameplay: gp } = this
     p5.cursor(p5.ARROW)
@@ -25,8 +23,5 @@ export default class Render {
 
   click() {
     const gp = this.gameplay
-
   }
-
-  keyPressed() {}
 }
