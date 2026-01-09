@@ -15,7 +15,7 @@ export default class GameClient {
   avatarSheet?: P5.Image
 
   constructor() {
-    const loadScene = new LoadScene()
+    const loadScene = new LoadScene(this)
     const menuScene = new MenuScene(this)
     const playScene = new PlayScene(this)
     const gameplay = new Gameplay(this)
@@ -65,11 +65,9 @@ export default class GameClient {
 
         playScene.gameplay = gameplay
         gameplay.playScene = playScene
-
-        loadScene.start()
       }
 
-      /* ///$ ctx for drawing avatars
+      /* //$ ctx for drawing avatars
 			var ctx;
 			draw = function() {
 				if (!loader.isLoaded){
@@ -86,25 +84,6 @@ export default class GameClient {
         this.mx = (p5.mouseX * 600) / p5.width
         this.my = (p5.mouseY * 600) / p5.width
         p5.scale(p5.width / 600)
-
-        p5.clear()
-
-        p5.background(50)
-        const cardIndex = Math.floor(p5.frameCount * 0.05) % 32
-        p5.image(
-          this.avatarSheet!,
-          300,
-          300,
-          200,
-          200,
-          200 * (cardIndex % 4),
-          200 * Math.floor(cardIndex / 4),
-          200,
-          200
-        )
-        p5.noFill()
-        p5.stroke(200)
-        p5.square(300, 300, 200)
 
         switch (sceneController.scene) {
           case "LOAD":
