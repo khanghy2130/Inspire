@@ -4,7 +4,7 @@ export type BodyType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 // ability: byName | byBody | byGender | bySubject | byRandom
 export type AbilityType = 0 | 1 | 2 | 3 | 4
 
-type OriginalCard = {
+export type OriginalCard = {
   name: string
   isMale: boolean
   subject: SubjectType
