@@ -15,7 +15,7 @@ export default class LoadScene {
   cardImages: P5.Image[] = []
 
   readonly SUBJECT_COLORS: [number, number, number][] = [
-    [60, 235, 155], // green
+    [60, 220, 145], // green
     [85, 180, 240], // blue
     [205, 145, 235], // purple (orange)
     [235, 200, 85], // yellow
@@ -33,30 +33,102 @@ export default class LoadScene {
       const p5 = this.p5
       const sqSize = p5.width * 0.1
       p5.noFill()
-      p5.strokeWeight(6)
 
       // science
       p5.clear()
+      p5.stroke(0)
+      p5.strokeWeight(10)
+      for (let i = 0; i < 3; i++) {
+        p5.push()
+        p5.translate(30, 30)
+        p5.rotate((p5.PI / 3) * i)
+        p5.ellipse(0, 0, 48, 15)
+        p5.pop()
+      }
+      // ---
+      p5.strokeWeight(4)
       p5.stroke(...this.SUBJECT_COLORS[0])
-      p5.square(30, 30, 50)
+      for (let i = 0; i < 3; i++) {
+        p5.push()
+        p5.translate(30, 30)
+        p5.rotate((p5.PI / 3) * i)
+        p5.ellipse(0, 0, 48, 15)
+        p5.pop()
+      }
       this.subjectIconImages[0] = p5.get(0, 0, sqSize, sqSize)
 
       // tech
       p5.clear()
+      const CUBE_X = p5.sqrt(3) * 10
+      p5.strokeWeight(12)
+      p5.stroke(0)
+      for (let i = 0; i < 3; i++) {
+        p5.push()
+        p5.translate(30, 90)
+        p5.rotate((p5.PI / 3) * 2 * i)
+        p5.line(0, 0, 0, 20)
+        p5.line(CUBE_X, 10, 0, 20)
+        p5.line(CUBE_X, 10, CUBE_X, -10)
+        p5.pop()
+      }
+      // ---
+      p5.strokeWeight(5)
       p5.stroke(...this.SUBJECT_COLORS[1])
-      p5.square(30, 90, 50)
+      for (let i = 0; i < 3; i++) {
+        p5.push()
+        p5.translate(30, 90)
+        p5.rotate((p5.PI / 3) * 2 * i)
+        p5.line(0, 0, 0, 20)
+        p5.line(CUBE_X, 10, 0, 20)
+        p5.line(CUBE_X, 10, CUBE_X, -10)
+        p5.pop()
+      }
       this.subjectIconImages[1] = p5.get(0, sqSize, sqSize, sqSize)
 
       // engineer
       p5.clear()
+      p5.noStroke()
+      p5.fill(0)
+      for (let i = 0; i < 8; i++) {
+        p5.push()
+        p5.translate(30, 150)
+        p5.rotate(p5.QUARTER_PI * i)
+        p5.quad(-9, -18, 9, -18, 5, -28, -5, -28)
+        p5.pop()
+      }
+      p5.noFill()
+      p5.strokeWeight(12)
+      p5.stroke(0)
+      p5.ellipse(30, 150, 30, 30)
+      // ---
+      p5.noStroke()
+      p5.fill(...this.SUBJECT_COLORS[2])
+      for (let i = 0; i < 8; i++) {
+        p5.push()
+        p5.translate(30, 150)
+        p5.rotate(p5.QUARTER_PI * i)
+        p5.quad(-8, -13, 8, -13, 3, -25, -3, -25)
+        p5.pop()
+      }
+      p5.noFill()
+      p5.strokeWeight(6)
       p5.stroke(...this.SUBJECT_COLORS[2])
-      p5.square(30, 150, 50)
+      p5.ellipse(30, 150, 30, 30)
       this.subjectIconImages[2] = p5.get(0, sqSize * 2, sqSize, sqSize)
 
       // math
       p5.clear()
+      p5.stroke(0)
+      p5.strokeWeight(12)
+      p5.line(15, 197, 45, 197)
+      p5.line(23, 197, 15, 220)
+      p5.bezier(38, 197, 28, 220, 30, 225, 42, 215)
+      // ---
       p5.stroke(...this.SUBJECT_COLORS[3])
-      p5.square(30, 210, 50)
+      p5.strokeWeight(6)
+      p5.line(15, 197, 45, 197)
+      p5.line(23, 197, 15, 220)
+      p5.bezier(38, 197, 28, 220, 30, 225, 42, 215)
       this.subjectIconImages[3] = p5.get(0, sqSize * 3, sqSize, sqSize)
     },
 
@@ -127,7 +199,7 @@ export default class LoadScene {
     const p5 = this.p5
 
     p5.background(10)
-    p5.scale(3.5) ////
+    // p5.scale(3.5) ////
 
     // card size: 100 x 160
     const cardIndex = p5.floor(p5.frameCount * 0.02) % 32
@@ -136,7 +208,7 @@ export default class LoadScene {
     const cardBgColor = p5.lerpColor(
       p5.color(subjectColor),
       p5.color(this.GRAY_COLOR),
-      0.85
+      0.7
     )
 
     // bg fill
@@ -144,9 +216,10 @@ export default class LoadScene {
     p5.fill(cardBgColor)
     p5.rect(50, 80, 95, 155, 20)
 
-    // top left corner fill
+    // corner fill
     p5.fill(subjectColor)
-    p5.rect(25, 20, 45, 35, 15)
+    p5.rect(20, 20, 35, 30, 15)
+    p5.rect(80, 140, 35, 30, 15)
 
     // bg arcs
     p5.strokeCap(p5.SQUARE)
@@ -168,6 +241,14 @@ export default class LoadScene {
         0,
         1.58
       )
+      p5.arc(
+        97,
+        157,
+        60 + 10 * ai + 10 * (ai >> 1),
+        40 + 20 * ai - 10 * (ai >> 1),
+        3.14,
+        -1.58
+      )
     }
     p5.strokeCap(p5.ROUND)
 
@@ -175,7 +256,7 @@ export default class LoadScene {
     p5.image(
       this.gc.avatarSheet!,
       50,
-      72,
+      70,
       85,
       85,
       200 * (cardIndex % 4),
