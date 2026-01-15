@@ -2,7 +2,6 @@ import type P5 from "p5"
 import _p5_ from "p5"
 import PlayScene from "./PlayScene"
 import MenuScene from "./MenuScene"
-import Gameplay from "./Gameplay"
 import { customFont } from "./font"
 import LoadScene from "./LoadScene"
 import SceneController from "./SceneController"
@@ -18,7 +17,6 @@ export default class GameClient {
     const loadScene = new LoadScene(this)
     const menuScene = new MenuScene(this)
     const playScene = new PlayScene(this)
-    const gameplay = new Gameplay(this)
     const sceneController = new SceneController()
 
     const sketch = (p5: _p5_) => {
@@ -57,46 +55,42 @@ export default class GameClient {
         p5.strokeJoin(p5.ROUND)
         p5.frameRate(60)
 
-        // connect instances
+        // connect instances //$
         loadScene.p5 = p5
-        menuScene.p5 = p5
-        playScene.p5 = p5
-        sceneController.p5 = p5
+        loadScene.sceneController = sceneController
 
-        playScene.gameplay = gameplay
-        gameplay.playScene = playScene
+        menuScene.p5 = p5
+        menuScene.loadScene = loadScene
+
+        playScene.p5 = p5
+
+        sceneController.p5 = p5
       }
 
-      /* //$ ctx for drawing avatars
-			var ctx;
-			draw = function() {
-				if (!loader.isLoaded){
-					if (!ctx){
-						ctx = this.externals.context;
-					}
-				}
-    	}
-			*/
-
       p5.draw = () => {
-        this.touchCountdown-- // update input delay
-        // rescale canvas and mouse position
+        //$ if less than x frameCount, set ctx and return
+
+        //$ rescale canvas and mouse position
         this.mx = (p5.mouseX * 600) / p5.width
         this.my = (p5.mouseY * 600) / p5.width
         p5.scale(p5.width / 600)
+
+        p5.cursor(p5.ARROW)
+        this.touchCountdown-- // update input delay
 
         switch (sceneController.scene) {
           case "LOAD":
             loadScene.update()
             loadScene.draw()
-            return
+            break
           case "MENU":
             menuScene.draw()
-            return
+            break
           case "PLAY":
             playScene.draw()
-            return
+            break
         }
+        sceneController.updateAndRender()
       }
       p5.touchEnded = () => {
         if (this.touchCountdown > 0) return

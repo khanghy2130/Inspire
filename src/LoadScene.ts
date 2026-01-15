@@ -2,6 +2,7 @@ import type P5 from "p5"
 import { customFont } from "./font"
 import originalCards, { OriginalCard } from "./originalCards"
 import GameClient from "./main"
+import SceneController from "./SceneController"
 
 type ProjectGraphics = {
   light: P5.Graphics[]
@@ -18,6 +19,7 @@ type colorData = {
 export default class LoadScene {
   gc: GameClient
   p5!: P5
+  sceneController!: SceneController
   isLoaded: boolean = false
 
   starImage!: P5.Image
@@ -518,6 +520,11 @@ export default class LoadScene {
     p5.imageMode(p5.CENTER)
   }
 
+  public renderMainBackground() {
+    const p5 = this.p5
+    p5.image(this.backgroundImage, 300, 300, 600, 600)
+  }
+
   public update() {
     // create other images with functions in list
     if (this.imagesCreateFunctions.length > 0) {
@@ -534,16 +541,20 @@ export default class LoadScene {
     }
 
     // all done
-    this.isLoaded = true
+    if (this.sceneController.isNotTransitioning()) {
+      this.sceneController.setScene("MENU")
+    }
   }
 
   public draw() {
     const p5 = this.p5
 
-    p5.background(50, 50, 0)
-    // p5.scale(3.5) ////
-
-    if (this.backgroundImage) p5.image(this.backgroundImage, 300, 300, 600, 600)
+    p5.background(0)
+    if (this.backgroundImage) {
+      this.renderMainBackground()
+      customFont.render("loading", 200, 310, 35, p5.color(250), p5)
+    }
+    return
 
     const cardIndex = p5.floor(p5.frameCount * 0.02) % 32
     const cimg = this.cardImages[cardIndex]
@@ -611,7 +622,5 @@ export default class LoadScene {
     }
 
     customFont.render("help", 530, 120, 12, p5.color(250), p5)
-
-    /// animated spinner
   }
 }
