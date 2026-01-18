@@ -22,12 +22,13 @@ export default class SceneController {
   public updateAndRender() {
     if (this.prg >= 2) return
     const p5 = this.p5
-    this.prg += 0.1 // 0.03
+    this.prg += 0.01 // 0.01
     if (this.prg >= 1 && this.targetScene !== this.scene) {
       this.scene = this.targetScene // switch scene
     }
     p5.noStroke()
     if (this.prg < 1) {
+      p5.cursor(p5.ARROW) // override any hovering
       p5.fill(0, 255 * this.prg)
     } else {
       p5.fill(0, 255 * (2 - this.prg))

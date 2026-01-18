@@ -4,7 +4,7 @@ import { customFont } from "./font"
 export default class Button {
   p5: P5
   isHovered: boolean = false
-  prg: number = 0
+  prg: number = 1
   x: number
   y: number
   w: number

@@ -63,6 +63,7 @@ export default class GameClient {
 
         menuScene.p5 = p5
         menuScene.loadScene = loadScene
+        menuScene.sceneController = sceneController
 
         playScene.p5 = p5
 
@@ -70,21 +71,23 @@ export default class GameClient {
 
         // create all buttons
         this.buttons = (
-          [[300, 500, 250, 70, "play", 30, () => {}]] as [
-            number,
-            number,
-            number,
-            number,
-            string,
-            number,
-            Function,
-          ][]
+          [
+            [
+              300,
+              500,
+              250,
+              70,
+              "play",
+              30,
+              () => {
+                sceneController.setScene("PLAY")
+              },
+            ],
+          ] as [number, number, number, number, string, number, Function][]
         ).map((bd) => new Button(...bd, p5))
       }
 
       p5.draw = () => {
-        //$ if less than x frameCount, set ctx and return
-
         //$ rescale canvas and mouse position
         this.mx = (p5.mouseX * 600) / p5.width
         this.my = (p5.mouseY * 600) / p5.width
@@ -95,6 +98,7 @@ export default class GameClient {
 
         switch (sceneController.scene) {
           case "LOAD":
+            //$ set ctx
             loadScene.update()
             loadScene.draw()
             break

@@ -37,12 +37,35 @@ export default class LoadScene {
   ]
   readonly GRAY_COLOR = 30
 
-  // readonly GENDER_COLORS: [number, number, number][] = [
-  //   [115, 185, 235], // male
-  //   [230, 170, 220], // female
-  // ]
-
   private imagesCreateFunctions: Function[] = [
+    // create main background image
+    () => {
+      const p5 = this.p5
+      p5.background(0)
+      p5.colorMode(p5.HSB, 255)
+
+      for (let z = 1; z >= 0; z--) {
+        p5.strokeWeight(1 + z * 15)
+        for (let i = 0; i < 18; i++) {
+          p5.stroke((i * 13) % 255, 255, 100 - z * 85)
+          const x = i * 50 - z * 3
+          const y = i * -20 - z * 3
+          p5.bezier(
+            22 + x,
+            -3 + y,
+            -880 + x,
+            813 + y,
+            630 + x,
+            114 + y,
+            -256 + x,
+            995 + y,
+          )
+        }
+      }
+      p5.colorMode(p5.RGB)
+      this.backgroundImage = p5.get(0, 0, p5.width, p5.height)
+    },
+
     // create subject icons (60x60)
     () => {
       const p5 = this.p5
@@ -147,32 +170,6 @@ export default class LoadScene {
       this.subjectIconImages[3] = p5.get(0, sqSize * 3, sqSize, sqSize)
     },
 
-    // create main background image
-    () => {
-      const p5 = this.p5
-      p5.background(0)
-      p5.colorMode(p5.HSB, 255)
-      p5.strokeWeight(1)
-      p5.noFill()
-      for (let i = 0; i < 20; i++) {
-        p5.stroke((i * 12) % 255, 255, 100)
-        var x = i * 45
-        var y = i * -18
-        p5.bezier(
-          22 + x,
-          -3 + y,
-          -880 + x,
-          813 + y,
-          630 + x,
-          114 + y,
-          -256 + x,
-          995 + y
-        )
-      }
-      p5.colorMode(p5.RGB)
-      this.backgroundImage = p5.get(0, 0, p5.width, p5.height)
-    },
-
     // create star image (60x60) & card backside
     () => {
       const p5 = this.p5
@@ -195,7 +192,7 @@ export default class LoadScene {
         p5.vertex(p5.cos(i * angle) * outerR, p5.sin(i * angle) * outerR)
         p5.vertex(
           p5.cos(i * angle + halfAngle) * innerR,
-          p5.sin(i * angle + halfAngle) * innerR
+          p5.sin(i * angle + halfAngle) * innerR,
         )
       }
       p5.endShape(p5.CLOSE)
@@ -227,7 +224,7 @@ export default class LoadScene {
       const cardBgColor = p5.lerpColor(
         p5.color(subjectColor),
         p5.color(this.GRAY_COLOR),
-        0.7
+        0.7,
       )
 
       // bg fill
@@ -249,8 +246,8 @@ export default class LoadScene {
           p5.lerpColor(
             p5.color(subjectColor),
             p5.color(cardBgColor),
-            (ai + 1) * 0.118
-          )
+            (ai + 1) * 0.118,
+          ),
         )
         p5.arc(
           3,
@@ -258,7 +255,7 @@ export default class LoadScene {
           60 + 10 * ai + 10 * (ai >> 1),
           40 + 20 * ai - 10 * (ai >> 1),
           0,
-          1.58
+          1.58,
         )
         p5.arc(
           97,
@@ -266,7 +263,7 @@ export default class LoadScene {
           60 + 10 * ai + 10 * (ai >> 1),
           40 + 20 * ai - 10 * (ai >> 1),
           3.14,
-          4.72
+          4.72,
         )
       }
       p5.strokeCap(p5.ROUND)
@@ -307,7 +304,7 @@ export default class LoadScene {
               a: scNums,
               b: black,
               c: 0.8,
-            }
+            },
           )
         }),
         dark: this.SUBJECT_COLORS.map((scNums) => {
@@ -321,7 +318,7 @@ export default class LoadScene {
               a: scNums,
               b: black,
               c: 0.3,
-            }
+            },
           )
         }),
         white: cpg(
@@ -334,7 +331,7 @@ export default class LoadScene {
             a: [170, 170, 170],
             b: black,
             c: 0,
-          }
+          },
         ),
       }
     },
@@ -379,7 +376,7 @@ export default class LoadScene {
     const cardBgColor = p5.lerpColor(
       p5.color(subjectColor),
       p5.color(this.GRAY_COLOR),
-      0.7
+      0.7,
     )
 
     // bg fill
@@ -401,8 +398,8 @@ export default class LoadScene {
         p5.lerpColor(
           p5.color(subjectColor),
           p5.color(cardBgColor),
-          (ai + 1) * 0.118
-        )
+          (ai + 1) * 0.118,
+        ),
       )
       p5.arc(
         3,
@@ -410,7 +407,7 @@ export default class LoadScene {
         60 + 10 * ai + 10 * (ai >> 1),
         40 + 20 * ai - 10 * (ai >> 1),
         0,
-        1.58
+        1.58,
       )
       p5.arc(
         97,
@@ -418,7 +415,7 @@ export default class LoadScene {
         60 + 10 * ai + 10 * (ai >> 1),
         40 + 20 * ai - 10 * (ai >> 1),
         3.14,
-        4.72
+        4.72,
       )
     }
     p5.strokeCap(p5.ROUND)
@@ -433,7 +430,7 @@ export default class LoadScene {
       200 * (cardIndex % 4),
       200 * p5.floor(cardIndex / 4),
       200,
-      200
+      200,
     )
 
     // name
@@ -445,7 +442,7 @@ export default class LoadScene {
       120 + 1,
       12,
       p5.color(0),
-      p5
+      p5,
     )
     customFont.render(oc.name, 50 - nameHalfWidth, 120, 12, p5.color(250), p5)
 
@@ -511,7 +508,7 @@ export default class LoadScene {
     sx: number,
     sy: number,
     sw: number,
-    sh: number
+    sh: number,
   ) {
     //$
     const p5 = this.p5
@@ -534,7 +531,6 @@ export default class LoadScene {
 
     // create card images if not done yet
     if (this.cardImages.length < 32) {
-      // stall to make sure the images are loaded
       //$ if (this.p5.frameCount < 100) { return }
       this.createCardImage()
       return
@@ -554,8 +550,9 @@ export default class LoadScene {
       this.renderMainBackground()
       customFont.render("loading", 200, 310, 35, p5.color(250), p5)
     }
-    // return
+    return
 
+    if (this.imagesCreateFunctions.length > 0) return
     const cardIndex = p5.floor(p5.frameCount * 0.02) % 32
     const cimg = this.cardImages[cardIndex]
     if (cimg) {
@@ -576,7 +573,7 @@ export default class LoadScene {
           0,
           0,
           280,
-          70
+          70,
         )
       }
       const gps2 = this.projectGraphics.dark
@@ -590,7 +587,7 @@ export default class LoadScene {
           0,
           0,
           280,
-          70
+          70,
         )
       }
       this.renderProjectGraphics(
@@ -602,7 +599,7 @@ export default class LoadScene {
         0,
         0,
         280,
-        70
+        70,
       )
     }
 
