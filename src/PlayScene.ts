@@ -31,7 +31,6 @@ export default class PlayScene {
 
   turns: number = 0
   completedAmount: number = 0
-  discardIsAvaliable: boolean = false
 
   constructor(gameClient: GameClient) {
     this.gc = gameClient
@@ -39,8 +38,7 @@ export default class PlayScene {
 
   setup() {
     // reset
-    this.discardIsAvaliable = true
-    this.turns = 10
+    this.turns = 5
     this.completedAmount = 0
     this.hand = []
     this.discardPile = []
@@ -114,7 +112,7 @@ export default class PlayScene {
     p5.noStroke()
     p5.fill(240, 210, 100)
     p5.text(
-      `Turns: ${this.turns}\nCompleted: ${this.completedAmount}\nDraw pile: ${this.drawPile.length}\nCan discard: ${this.discardIsAvaliable}`,
+      `Turns: ${this.turns}\nCompleted: ${this.completedAmount}\nDraw pile: ${this.drawPile.length}`,
       500,
       100,
     )
@@ -144,6 +142,31 @@ export default class PlayScene {
       p5.strokeWeight(5)
       p5.fill(250)
       p5.text(card.power, x - 20, 450)
+      let eligibleCount: number | null = null
+      if (card.oc.ability === 0) {
+        // byName
+        eligibleCount = this.drawPile.reduce(
+          (count, drawC) =>
+            count + (drawC.oc.name[0] === card.oc.name[0] ? 1 : 0),
+          0,
+        )
+      } else if (card.oc.ability === 1) {
+        // byBody
+        eligibleCount = this.drawPile.reduce(
+          (count, drawC) => count + (drawC.oc.body === card.oc.body ? 1 : 0),
+          0,
+        )
+      } else if (card.oc.ability === 3) {
+        // bySubject
+        eligibleCount = this.drawPile.reduce(
+          (count, drawC) =>
+            count + (drawC.oc.subject === card.oc.subject ? 1 : 0),
+          0,
+        )
+      }
+      if (eligibleCount !== null) {
+        p5.text(eligibleCount, x, 500)
+      }
     }
   }
 
@@ -162,7 +185,6 @@ export default class PlayScene {
         if (scs.length > 1) return
         const sCard = scs[0]
         this.turns--
-        this.discardIsAvaliable = true
         // hit project
         for (let i = 0; i < this.projectsList.length; i++) {
           const project = this.projectsList[i]
@@ -174,6 +196,7 @@ export default class PlayScene {
             this.turns += 5
             this.projectsList.splice(i, 1)
             this.testAddProject(project.subject)
+            break
           }
         }
         // >>> discard played card
@@ -186,8 +209,8 @@ export default class PlayScene {
       }
       // D: discard
       else if (keyCode === 68) {
-        if (!this.discardIsAvaliable) return
         if (scs.length === 1) return // can't discard exactly 1 card
+        this.turns--
         while (scs.length > 0) {
           const sCard = scs.shift() as TestPlayingCard
           // remove card from hand
@@ -196,7 +219,6 @@ export default class PlayScene {
           this.discardPile.push(sCard)
         }
         this.testDrawToFillHand() // draw new cards
-        this.discardIsAvaliable = false
       }
     }
   }
