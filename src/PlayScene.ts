@@ -27,7 +27,7 @@ export default class PlayScene {
   hand: TestPlayingCard[] = []
   projectsList: TestProject[] = []
 
-  selectedCard: TestPlayingCard | null = null
+  selectedCards: TestPlayingCard[] = []
 
   turns: number = 0
   completedAmount: number = 0
@@ -51,7 +51,7 @@ export default class PlayScene {
       index: index,
     }))
 
-    this.testDraw()
+    this.testDrawToFillHand()
 
     const allSubjectTypes: SubjectType[] = [0, 1, 2, 3]
     while (allSubjectTypes.length > 0) {
@@ -78,7 +78,7 @@ export default class PlayScene {
     this.discardPile = []
   }
 
-  testDraw() {
+  testDrawToFillHand() {
     while (this.hand.length < 6) {
       // reshuffle if needed
       if (this.drawPile.length === 0) {
@@ -91,6 +91,16 @@ export default class PlayScene {
           1,
         )[0],
       )
+    }
+  }
+
+  testSelectCard(card: TestPlayingCard) {
+    const scs = this.selectedCards
+    const indexOfCard = scs.indexOf(card)
+    if (indexOfCard === -1) {
+      scs.push(card)
+    } else {
+      scs.splice(indexOfCard, 1)
     }
   }
 
@@ -122,7 +132,7 @@ export default class PlayScene {
     for (let i = 0; i < this.hand.length; i++) {
       const card = this.hand[i]
       const x = 75 + i * 90
-      if (this.selectedCard === card) {
+      if (this.selectedCards.includes(card)) {
         p5.noFill()
         p5.stroke(250)
         p5.strokeWeight(5)
@@ -140,15 +150,17 @@ export default class PlayScene {
   keyReleased() {
     const keyCode = this.p5.keyCode
 
-    if (this.selectedCard) {
-      const sCard = this.selectedCard
-
+    const scs = this.selectedCards
+    if (scs.length > 0) {
       // I: inspire
       if (keyCode === 73) {
-        sCard.power += 5
+        scs.forEach((c) => (c.power += 5))
       }
       // P: play
       else if (keyCode === 80) {
+        // only if selected 1 card
+        if (scs.length > 1) return
+        const sCard = scs[0]
         this.turns--
         this.discardIsAvaliable = true
         // hit project
@@ -169,24 +181,23 @@ export default class PlayScene {
         this.hand.splice(this.hand.indexOf(sCard), 1)
         // add to discard pile
         this.discardPile.push(sCard)
-        this.testDraw() // draw new card
-        this.selectedCard = null
+        this.testDrawToFillHand() // draw new card
+        this.selectedCards = [] // deselect all
       }
       // D: discard
       else if (keyCode === 68) {
         if (!this.discardIsAvaliable) return
-        // remove card from hand
-        this.hand.splice(this.hand.indexOf(sCard), 1)
-        // add to discard pile
-        this.discardPile.push(sCard)
-        this.testDraw() // draw new card
-        this.selectedCard = null
+        if (scs.length === 1) return // can't discard exactly 1 card
+        while (scs.length > 0) {
+          const sCard = scs.shift() as TestPlayingCard
+          // remove card from hand
+          this.hand.splice(this.hand.indexOf(sCard), 1)
+          // add to discard pile
+          this.discardPile.push(sCard)
+        }
+        this.testDrawToFillHand() // draw new cards
+        this.discardIsAvaliable = false
       }
-    }
-
-    // Q: no more discard
-    if (keyCode === 81) {
-      this.discardIsAvaliable = false
     }
   }
 
@@ -197,7 +208,7 @@ export default class PlayScene {
     for (let i = 0; i < this.hand.length; i++) {
       const x = 75 + i * 90
       if (mx < x + 50 && mx > x - 50 && my < 500 + 80 && my > 500 - 80) {
-        this.selectedCard = this.hand[i]
+        this.testSelectCard(this.hand[i])
         return
       }
     }
