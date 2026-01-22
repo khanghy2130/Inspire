@@ -29,8 +29,9 @@ export default class PlayScene {
 
   selectedCards: TestPlayingCard[] = []
 
-  turns: number = 0
+  energy: number = 0
   completedAmount: number = 0
+  projectMaxHP: number = 10
 
   constructor(gameClient: GameClient) {
     this.gc = gameClient
@@ -38,7 +39,8 @@ export default class PlayScene {
 
   setup() {
     // reset
-    this.turns = 5
+    this.energy = 10
+    this.projectMaxHP = 10
     this.completedAmount = 0
     this.hand = []
     this.discardPile = []
@@ -61,8 +63,9 @@ export default class PlayScene {
 
   testAddProject(subject: SubjectType) {
     const pl = this.projectsList
-    // set maxHp to previous maxHP + 5
-    const newMaxHP = pl.length === 0 ? 10 : pl[pl.length - 1].maxHp + 5
+    // set maxHp to previous maxHP +x
+    const newMaxHP = this.projectMaxHP
+    this.projectMaxHP += 5
     pl.push({
       hp: newMaxHP,
       maxHp: newMaxHP,
@@ -112,7 +115,7 @@ export default class PlayScene {
     p5.noStroke()
     p5.fill(240, 210, 100)
     p5.text(
-      `Turns: ${this.turns}\nCompleted: ${this.completedAmount}\nDraw pile: ${this.drawPile.length}`,
+      `Energy: ${this.energy}\nCompleted: ${this.completedAmount}\nDraw pile: ${this.drawPile.length}`,
       500,
       100,
     )
@@ -184,7 +187,7 @@ export default class PlayScene {
         // only if selected 1 card
         if (scs.length > 1) return
         const sCard = scs[0]
-        this.turns--
+        this.energy--
         // hit project
         for (let i = 0; i < this.projectsList.length; i++) {
           const project = this.projectsList[i]
@@ -193,7 +196,9 @@ export default class PlayScene {
           // completed project? replace with new project
           if (project.hp <= 0) {
             this.completedAmount++
-            this.turns += 5
+            this.energy += 3
+            // extra turn if hp is exactly 0
+            if (project.hp === 0) this.energy += 1
             this.projectsList.splice(i, 1)
             this.testAddProject(project.subject)
             break
@@ -210,7 +215,7 @@ export default class PlayScene {
       // D: discard
       else if (keyCode === 68) {
         if (scs.length === 1) return // can't discard exactly 1 card
-        this.turns--
+        this.energy--
         while (scs.length > 0) {
           const sCard = scs.shift() as TestPlayingCard
           // remove card from hand
