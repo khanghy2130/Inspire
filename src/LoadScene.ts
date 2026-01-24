@@ -513,9 +513,9 @@ export default class LoadScene {
     dy: number,
     dw: number,
     dh: number,
+    p5: P5,
   ) {
     //$ use drawImage()
-    const p5 = this.p5
     p5.imageMode(p5.CORNER)
     p5.image(gp, dx, dy, dw, dh, sx, sy, sw, sh)
     p5.imageMode(p5.CENTER)
@@ -579,6 +579,7 @@ export default class LoadScene {
           25 + i * 85,
           280,
           70,
+          p5,
         )
       }
       const gps2 = this.projectGraphics.dark
@@ -593,6 +594,7 @@ export default class LoadScene {
           25 + i * 85,
           280,
           70,
+          p5,
         )
       }
       this.renderProjectGraphics(
@@ -605,6 +607,7 @@ export default class LoadScene {
         370,
         280,
         70,
+        p5,
       )
     }
 

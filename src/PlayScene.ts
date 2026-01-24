@@ -34,8 +34,9 @@ type ProjectController = {
   readonly Y_POSITONS: number[] // X value is always 150
   projectMaxHP: number
   queue: Project[]
+
+  // BLOCK actions if target is not null, or .spawnPrg of last in queue is below 2
   hitController: {
-    // block actions if is not null. become null after done draining
     target: {
       project: Project
       previousHP: number
@@ -67,7 +68,6 @@ type ProjectController = {
   }
   add: (subject: SubjectType) => void
   damage: (subject: SubjectType, hitAmount: number) => void
-  remove: (subject: SubjectType) => void
   renderProjects: () => void
 }
 
@@ -113,13 +113,17 @@ export default class PlayScene {
     },
     damage: (subject, hitAmount) => {
       const projectController = this.projectController
-      if (projectController.hitController.target) {
-        return // safe exit if target is still there
+      const queue = projectController.queue
+      if (
+        projectController.hitController.target ||
+        queue[queue.length - 1].spawnPrg < 2
+      ) {
+        return // safe exit if target is still there OR last project is still spawning
       }
       let project!: Project
-      for (let i = 0; i < this.projectController.queue.length; i++) {
-        if (this.projectController.queue[i].subject === subject) {
-          project = this.projectController.queue[i]
+      for (let i = 0; i < queue.length; i++) {
+        if (queue[i].subject === subject) {
+          project = queue[i]
           break
         }
       }
@@ -140,21 +144,14 @@ export default class PlayScene {
         isPerfect,
       }
     },
-    remove: (subject) => {
-      const projectController = this.projectController
-      let project: Project
-
-      // spawn flyer & lasers
-      // set moveUpPrg for other projects
-      // add new project
-    },
     renderProjects: () => {
       const p5 = this.p5
       const queue = this.projectController.queue
       const target = this.projectController.hitController.target
       let { projectGraphics, renderProjectGraphics } = this.loadScene
-      renderProjectGraphics = renderProjectGraphics.bind(this) //$
+      let doesRemoveTarget = false
 
+      // all projects
       for (let i = 0; i < queue.length; i++) {
         const project = queue[i]
 
@@ -176,10 +173,13 @@ export default class PlayScene {
           continue
         }
 
-        // spawnPrg
+        // update animation progresses
         project.spawnPrg = p5.min(project.spawnPrg + 0.016, 2)
-        const spawnXOffset =
-          (1 - easeOutCubic(p5.min(project.spawnPrg, 1))) * -300
+        project.moveUpPrg = p5.min(project.moveUpPrg + 0.02, 1)
+
+        const _x = (1 - easeOutCubic(p5.min(project.spawnPrg, 1))) * -300 + 10
+        const _y = (1 - easeOutCubic(project.moveUpPrg)) * 85 + (20 + 85 * i)
+
         // spawning & normal
         const hpFactor =
           project.spawnPrg < 2
@@ -193,10 +193,11 @@ export default class PlayScene {
           0,
           280,
           70,
-          10 + spawnXOffset,
-          20 + 85 * i,
+          _x,
+          _y,
           280,
           70,
+          p5,
         )
 
         // light panel
@@ -207,36 +208,39 @@ export default class PlayScene {
             0,
             280 * hpFactor,
             70,
-            10 + spawnXOffset,
-            20 + 85 * i,
+            _x,
+            _y,
             280 * hpFactor,
             70,
+            p5,
           )
         }
 
         // white panel (being damaged)
         if (isTarget) {
           target.drainPrg += 0.02
-          // finish draining?
+          // finish draining? REMOVE target
           if (target.drainPrg >= 1) {
-            ///
-          } else {
-            // start(currentHP), end (previousHP)
-            const startX = (1 / project.maxHp) * project.hp * 280
+            doesRemoveTarget = true
+          }
+          // update damaging animation
+          else {
+            const whiteX = (1 / project.maxHp) * project.hp * 280
             let whiteWidth =
-              (1 / project.maxHp) * target.previousHP * 280 - startX
+              (1 / project.maxHp) * target.previousHP * 280 - whiteX
             whiteWidth =
               whiteWidth * (1 - easeOutCubic(p5.max(target.drainPrg, 0)))
             renderProjectGraphics(
               projectGraphics.white,
-              startX,
+              whiteX,
               0,
               whiteWidth,
               70,
-              10 + startX,
+              10 + whiteX,
               20 + 85 * i,
               whiteWidth,
               70,
+              p5,
             )
 
             // flasher
@@ -260,6 +264,24 @@ export default class PlayScene {
         }
 
         // contents (hp display number is real hp + draining if is hit target)
+      }
+
+      if (doesRemoveTarget && target) {
+        // target project is completed?
+        if (target.isCompleted) {
+          const i = queue.indexOf(target.project)
+          // move below projects up
+          for (let j = i + 1; j < queue.length; j++) {
+            queue[j].moveUpPrg = 0
+          }
+          queue.splice(i, 1) // remove old project
+          // add new project
+          this.projectController.add(target.project.subject)
+
+          console.log("flyer spawn & laser")
+        }
+        // remove target
+        this.projectController.hitController.target = null
       }
     },
   }
