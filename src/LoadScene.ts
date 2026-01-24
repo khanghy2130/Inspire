@@ -542,7 +542,7 @@ export default class LoadScene {
 
     // all done
     if (this.sceneController.isNotTransitioning()) {
-      this.sceneController.setScene("MENU")
+      this.sceneController.setScene("PLAY")
     }
   }
 
