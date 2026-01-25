@@ -30,6 +30,12 @@ type Project = {
 //   isCharging: boolean
 // }
 
+type StatsController = {
+  energy: number
+  completedAmount: number
+  render: Function
+}
+
 type ProjectController = {
   readonly Y_POSITONS: number[] // X value is always 150
   projectMaxHP: number
@@ -81,9 +87,53 @@ export default class PlayScene {
     PlayingCard[]
   >
 
-  stats: Record<"energy" | "completedAmount", number> = {
+  statsController: StatsController = {
     energy: 0,
     completedAmount: 0,
+    render: () => {
+      const p5 = this.p5
+
+      p5.push()
+      p5.translate(460, 45)
+      // p5.scale(1 + p5.cos(p5.frameCount * 0.1) * 0.2)
+      p5.strokeWeight(8)
+      p5.noStroke()
+      p5.fill(35, 70, 140)
+      p5.rect(-60, 0, 120, 50, 15, 0, 0, 15)
+      p5.fill(30, 110, 40)
+      p5.rect(60, 0, 120, 50, 0, 15, 15, 0)
+
+      const energy = this.statsController.energy + ""
+      const completedAmount = this.statsController.completedAmount + ""
+
+      customFont.render(
+        energy,
+        -40 - customFont.getNumHalfWidth(energy, 30),
+        16,
+        30,
+        p5.color(200),
+        p5,
+      )
+      customFont.render(
+        completedAmount,
+        40 - customFont.getNumHalfWidth(completedAmount, 30),
+        16,
+        30,
+        p5.color(200),
+        p5,
+      )
+
+      p5.stroke(45, 185, 80)
+      p5.line(82, 3, 90, 12)
+      p5.line(100, -10, 90, 12)
+
+      p5.stroke(35, 165, 225)
+      p5.line(-86, 0, -93, 12)
+      p5.line(-86, 0, -100, 0)
+      p5.line(-100, 0, -93, -12)
+
+      p5.pop()
+    },
   }
 
   projectController: ProjectController = {
@@ -105,7 +155,7 @@ export default class PlayScene {
         maxHp: maxHp,
         // at beginning? apply delay
         spawnPrg:
-          this.stats.completedAmount === 0 && false ///
+          this.statsController.completedAmount === 0 && false ///
             ? -projectController.queue.length * 0.2
             : 0,
         moveUpPrg: 1,
@@ -292,10 +342,8 @@ export default class PlayScene {
 
   setup() {
     // reset
-    this.stats = {
-      energy: 10,
-      completedAmount: 0,
-    }
+    this.statsController.energy = 10
+    this.statsController.completedAmount = 0
     this.cards = {
       drawPile: [],
       discardPile: [],
@@ -332,6 +380,8 @@ export default class PlayScene {
     p5.image(loadScene.backgroundImage, 300, 300, 600, 600)
 
     this.projectController.renderProjects()
+
+    this.statsController.render()
   }
 
   keyReleased() {

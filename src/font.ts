@@ -11,6 +11,18 @@ type drawCharParams = {
 }
 
 export let customFont = {
+  getNumHalfWidth: function (numStr: string, s: number): number {
+    let w = 0
+    for (let i = 0; i < numStr.length; i++) {
+      if (numStr[i] === "0" || numStr[i] === "4") {
+        w += s * 0.8
+      } else {
+        w += s * 0.6
+      }
+    }
+    return (w / 3) * 2
+  },
+
   render: function (
     message: string,
     x: number,
@@ -36,7 +48,7 @@ export let customFont = {
   },
 
   drawChar: function ({ char, ag, s, x, y, obj, c }: drawCharParams) {
-    ag.push() //$
+    ag.push()
     ag.translate(x, y)
     ag.scale(s / 50)
 
@@ -597,16 +609,6 @@ export let customFont = {
           obj.tx += (40 * s) / 50
         }
         break
-      case "*":
-        {
-          ag.noStroke()
-          ag.fill(c)
-          ag.quad(2, -10, 12, -10, 38, -40, 28, -40)
-          ag.quad(22, -10, 32, -10, 18, -40, 8, -40)
-
-          obj.tx += (40 * s) / 50
-        }
-        break
       case "/":
         {
           ag.noStroke()
@@ -634,29 +636,6 @@ export let customFont = {
           ag.triangle(2, 10, 4, 0, 10, 0)
 
           obj.tx += (20 * s) / 50
-        }
-        break
-      case '"':
-        {
-          ag.noStroke()
-          ag.fill(c)
-          ag.quad(8, -40, 18, -40, 16, -30, 6, -30)
-          ag.triangle(16, -50, 14, -40, 8, -40)
-
-          ag.quad(23, -40, 33, -40, 31, -30, 21, -30)
-          ag.triangle(31, -50, 29, -40, 23, -40)
-
-          obj.tx += (30 * s) / 50
-        }
-        break
-      case "'":
-        {
-          ag.noStroke()
-          ag.fill(c)
-          ag.quad(10, -50, 20, -50, 18, -40, 8, -40)
-          ag.triangle(10, -30, 12, -40, 18, -40)
-
-          obj.tx += (15 * s) / 50
         }
         break
       case "!":
@@ -688,48 +667,8 @@ export let customFont = {
           obj.tx += (40 * s) / 50
         }
         break
-      case "$":
-        {
-          ag.strokeCap(ag.SQUARE)
-          ag.strokeWeight(10)
-          ag.stroke(c)
-          ag.noFill()
-
-          ag.bezier(40, -40, 20, -55, 0, -35, 20, -25)
-          ag.bezier(20, -25, 40, -15, 20, 10, 0, -10)
-          ag.point(20, -25)
-
-          ag.strokeCap(ag.ROUND)
-          ag.strokeWeight(1)
-
-          ag.noStroke()
-          ag.fill(c)
-          ag.quad(10, 0, 20, -50, 30, -50, 20, 0)
-
-          obj.tx += (40 * s) / 50
-        }
-        break
-      case "%":
-        {
-          ag.noStroke()
-          ag.fill(c)
-
-          ag.quad(0, 0, 40, -50, 50, -50, 10, 0)
-
-          ag.strokeWeight(8)
-          ag.stroke(c)
-          ag.noFill()
-
-          ag.ellipse(15, -40, 12, 12)
-          ag.ellipse(35, -10, 12, 12)
-
-          ag.strokeWeight(1)
-
-          obj.tx += (50 * s) / 50
-        }
-        break
     }
 
-    ag.pop() //$
+    ag.pop()
   },
 }
