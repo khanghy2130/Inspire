@@ -72,9 +72,17 @@ type ProjectController = {
   }
   add: (subject: SubjectType) => void
   damage: (subject: SubjectType, hitAmount: number) => void
-  renderProjects: () => void
-  renderFlyer: () => void
-  renderLaser: () => void
+  renderProjects: Function
+  renderFlyer: Function
+  renderLaser: Function
+}
+
+type DeckController = {
+  delay: number
+  isDrawing: boolean
+  flyers: number[] // prg[]
+  displayPileCount: number
+  renderDrawPile: Function
 }
 
 export default class PlayScene {
@@ -428,6 +436,41 @@ export default class PlayScene {
     },
   }
 
+  deckController: DeckController = {
+    delay: 0,
+    isDrawing: false,
+    flyers: [],
+    displayPileCount: 0,
+    renderDrawPile: () => {
+      const p5 = this.p5
+      const cardBackside = this.loadScene.cardBackside
+      const deckController = this.deckController
+      let pileCount = this.cards.drawPile.length
+
+      // draw pile
+      if (
+        ///
+        true ||
+        pileCount > 0 ||
+        deckController.displayPileCount > 0
+      ) {
+        p5.image(cardBackside, 530, 180, 100, 160)
+      }
+
+      // shuffling flyers ///
+
+      // is shuffling? show dummy count
+      if (deckController.flyers.length > 0) {
+        pileCount = deckController.displayPileCount
+      }
+      // render pile count
+      customFont.render("" + pileCount, 480, 260, 22, p5.color(250), p5)
+
+      // test hand
+      p5.image(cardBackside, 500, 480, 100, 160)
+    },
+  }
+
   constructor(gameClient: GameClient) {
     this.gc = gameClient
   }
@@ -436,18 +479,22 @@ export default class PlayScene {
     // reset
     this.statsController.energy = 10
     this.statsController.completedAmount = 0
-    this.cards = {
-      drawPile: [],
-      discardPile: [],
-      hand: [],
-      selectedCards: [],
-    }
+
     this.projectController.projectMaxHP = 10
     this.projectController.queue = []
     this.projectController.hitController.target = null
     this.projectController.hitController.laser = null
     this.projectController.hitController.flyer = null
 
+    this.deckController.flyers = []
+    this.deckController.delay = 60 // delay before shuffle
+
+    this.cards = {
+      drawPile: [],
+      discardPile: [],
+      hand: [],
+      selectedCards: [],
+    }
     // fill discardPile with default cards
     this.cards.discardPile = originalCards.map((oc, index) => ({
       oc,
@@ -471,8 +518,9 @@ export default class PlayScene {
     p5.cursor(p5.ARROW)
     p5.image(loadScene.backgroundImage, 300, 300, 600, 600)
 
-    projectController.renderProjects()
+    this.deckController.renderDrawPile()
 
+    projectController.renderProjects()
     projectController.renderLaser()
     this.statsController.render()
     projectController.renderFlyer()
