@@ -1,5 +1,5 @@
 import type P5 from "p5"
-import GameClient, { easeOutCubic } from "./main"
+import GameClient, { easeOutCubic, easeOutElastic } from "./main"
 import { customFont } from "./font"
 import LoadScene from "./LoadScene"
 import originalCards, { OriginalCard } from "./originalCards"
@@ -31,6 +31,7 @@ type Project = {
 // }
 
 type StatsController = {
+  bouncePrg: number
   energy: number
   completedAmount: number
   render: Function
@@ -41,7 +42,6 @@ type ProjectController = {
   projectMaxHP: number
   queue: Project[]
 
-  // BLOCK actions if target is not null, or .spawnPrg of last in queue is below 2
   hitController: {
     target: {
       project: Project
@@ -88,14 +88,29 @@ export default class PlayScene {
   >
 
   statsController: StatsController = {
+    bouncePrg: 1,
     energy: 0,
     completedAmount: 0,
     render: () => {
       const p5 = this.p5
+      const statsController = this.statsController
+      if (statsController.bouncePrg < 1) {
+        if (statsController.bouncePrg < 0.08) {
+          statsController.bouncePrg = 0.08
+        } else {
+          statsController.bouncePrg = p5.min(
+            statsController.bouncePrg + 0.005,
+            1,
+          )
+        }
+      }
+      let scaleFactor = easeOutElastic(statsController.bouncePrg)
 
       p5.push()
-      p5.translate(460, 45)
-      // p5.scale(1 + p5.cos(p5.frameCount * 0.1) * 0.2)
+      p5.translate(460, 75 - scaleFactor * 30)
+      scaleFactor *= 0.5 // animated range
+      p5.scale(0.5 + scaleFactor, 1.5 - scaleFactor)
+
       p5.strokeWeight(8)
       p5.noStroke()
       p5.fill(35, 70, 140)
@@ -158,15 +173,17 @@ export default class PlayScene {
         spawnPrg:
           this.statsController.completedAmount === 0 && false ///
             ? -projectController.queue.length * 0.2
-            : -1,
+            : 0, ///-1,
         moveUpPrg: 1,
       })
     },
     damage: (subject, hitAmount) => {
       const projectController = this.projectController
       const queue = projectController.queue
+      /// USE THIS ON INPUT: block action if target still exists OR laser still exists OR last project is still spawning
       if (
         projectController.hitController.target ||
+        projectController.hitController.laser ||
         queue[queue.length - 1].spawnPrg < 2
       ) {
         return // safe exit if target is still there OR last project is still spawning
@@ -226,7 +243,7 @@ export default class PlayScene {
         }
 
         // update animation progresses
-        project.spawnPrg = p5.min(project.spawnPrg + 0.016, 2)
+        project.spawnPrg = p5.min(project.spawnPrg + 0.016 * 3, 2) ///
         project.moveUpPrg = p5.min(project.moveUpPrg + 0.02, 1)
 
         const _x = (1 - easeOutCubic(p5.min(project.spawnPrg, 1))) * -300 + 10
@@ -388,12 +405,26 @@ export default class PlayScene {
       if (!laser) {
         return
       }
+      laser.prg = p5.min(laser.prg + 0.01, 1)
+      if (laser.prg === 1) {
+        this.projectController.hitController.laser = null
+        const statsController = this.statsController
+        statsController.energy += 3 + (laser.isPerfect ? 1 : 0)
+        statsController.completedAmount++
+        statsController.bouncePrg = 0
+      }
+
       const [x, y, w, h, a1, a2] = laser.arcInfo
       p5.noFill()
-      p5.stroke(255, 255, 0)
       p5.strokeWeight(10)
-      p5.arc(x, y, w, h, a1, a2)
-      ///
+      if (laser.isPerfect) {
+        p5.stroke(255, 255, 0)
+      } else {
+        p5.stroke(255)
+      }
+      const headAngle = p5.map(p5.min(laser.prg, 0.8), 0, 0.8, a2, a1)
+      const tailAngle = p5.map(p5.max(laser.prg, 0.2), 0.2, 1, a2, a1)
+      p5.arc(x, y, w, h, headAngle, tailAngle)
     },
   }
 
@@ -442,9 +473,9 @@ export default class PlayScene {
 
     projectController.renderProjects()
 
+    projectController.renderLaser()
     this.statsController.render()
     projectController.renderFlyer()
-    projectController.renderLaser()
 
     // const Y_POSITONS = projectController.Y_POSITONS
     // p5.stroke(255)

@@ -25,6 +25,15 @@ export function easeOutCubic(x: number): number {
   return 1 - Math.pow(1 - x, 3)
 }
 
+export function easeOutElastic(x: number) {
+  const c4 = (2 * 180) / 3
+  return x === 0
+    ? 0
+    : x === 1
+      ? 1
+      : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1
+}
+
 export default class GameClient {
   // rescaled mouse position (0 to 400 width)
   mx: number = 0
