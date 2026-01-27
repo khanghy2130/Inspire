@@ -7,9 +7,8 @@ import originalCards, { OriginalCard } from "./originalCards"
 type PlayingCard = {
   oc: OriginalCard
   power: number
-  index: number
+  imageData: P5.Image
   squishPrg: number
-  flipPrg: number // 0.5 is half way
 }
 
 type Project = {
@@ -78,22 +77,25 @@ type ProjectController = {
 }
 
 type DeckController = {
+  cards: Record<
+    "drawPile" | "discardPile" | "hand" | "selectedCards",
+    PlayingCard[]
+  >
+  drawPrgs: number[]
   delay: number
   isDrawing: boolean
   flyers: number[] // prg[]
   displayPileCount: number
+  startDrawing: Function
+  // render draw pile & flyers & drawn cards
   renderDrawPile: Function
+  renderHand: Function
 }
 
 export default class PlayScene {
   gc: GameClient
   p5!: P5
   loadScene!: LoadScene
-
-  cards!: Record<
-    "drawPile" | "discardPile" | "hand" | "selectedCards",
-    PlayingCard[]
-  >
 
   statsController: StatsController = {
     bouncePrg: 1,
@@ -179,9 +181,9 @@ export default class PlayScene {
         maxHp: maxHp,
         // at beginning? apply delay
         spawnPrg:
-          this.statsController.completedAmount === 0 && false ///
+          this.statsController.completedAmount === 0
             ? -projectController.queue.length * 0.2
-            : 0, ///-1,
+            : -1,
         moveUpPrg: 1,
       })
     },
@@ -251,7 +253,7 @@ export default class PlayScene {
         }
 
         // update animation progresses
-        project.spawnPrg = p5.min(project.spawnPrg + 0.016 * 3, 2) ///
+        project.spawnPrg = p5.min(project.spawnPrg + 0.016, 2)
         project.moveUpPrg = p5.min(project.moveUpPrg + 0.02, 1)
 
         const _x = (1 - easeOutCubic(p5.min(project.spawnPrg, 1))) * -300 + 10
@@ -437,37 +439,150 @@ export default class PlayScene {
   }
 
   deckController: DeckController = {
+    cards: {
+      drawPile: [],
+      discardPile: [],
+      hand: [],
+      selectedCards: [],
+    },
+    drawPrgs: [],
     delay: 0,
     isDrawing: false,
     flyers: [],
     displayPileCount: 0,
+    startDrawing: () => {
+      this.deckController.isDrawing = true
+      this.deckController.displayPileCount = 0
+      this.deckController.flyers = []
+      this.deckController.delay = 20
+    },
     renderDrawPile: () => {
       const p5 = this.p5
       const cardBackside = this.loadScene.cardBackside
       const deckController = this.deckController
-      let pileCount = this.cards.drawPile.length
+      const cards = deckController.cards
+      let pileCount = cards.drawPile.length
 
-      // draw pile
-      if (
-        ///
-        true ||
-        pileCount > 0 ||
-        deckController.displayPileCount > 0
-      ) {
+      // update
+      if (deckController.isDrawing && deckController.delay-- < 0) {
+        deckController.delay = 10 // reset delay
+        // not shuffling?
+        if (deckController.flyers.length === 0) {
+          // empty draw pile? start shuffling by adding flyers
+          if (cards.drawPile.length === 0) {
+            deckController.flyers = []
+            for (let fi = 0; fi < cards.discardPile.length; fi++) {
+              deckController.flyers.push(0 - fi * 0.05) // delay between flyers
+            }
+          }
+          // hand not full? draw
+          else if (cards.hand.length < 6) {
+            const pickedCard = cards.drawPile.splice(
+              p5.random() * cards.drawPile.length,
+              1,
+            )[0]
+            cards.hand.push(pickedCard)
+            deckController.drawPrgs.push(0)
+          }
+          // hand full? stop
+          else {
+            deckController.isDrawing = false
+            console.log("done drawing")
+          }
+        }
+      }
+
+      // render draw pile backside
+      if (pileCount > 0 || deckController.displayPileCount > 0) {
         p5.image(cardBackside, 530, 180, 100, 160)
       }
 
-      // shuffling flyers ///
+      // render cards being drawn
+      const backsideImage = this.loadScene.cardBackside
+      for (let di = 0; di < deckController.drawPrgs.length; di++) {
+        deckController.drawPrgs[di] += 0.02
+        const prg = deckController.drawPrgs[di]
+
+        const handIndex =
+          cards.hand.length - deckController.drawPrgs.length + di
+        const card = cards.hand[handIndex]
+
+        const easedPrg = easeOutCubic(prg)
+        const x = p5.map(easedPrg, 0, 1, 530, 75 + handIndex * 90)
+        const y = p5.map(easedPrg, 0, 1, 180, 500)
+
+        // backside 0 to 0.5
+        if (easedPrg < 0.5) {
+          p5.image(backsideImage, x, y, 100, 160)
+        }
+        // 0.5 to 0.75 backside flipping
+        else if (easedPrg < 0.75) {
+          p5.image(
+            backsideImage,
+            x,
+            y,
+            100 * p5.map(easedPrg, 0.5, 0.75, 1, 0),
+            160,
+          )
+        }
+        // 0.75 to 1 face side flipping
+        else {
+          p5.image(
+            card.imageData,
+            x,
+            y,
+            100 * p5.map(easedPrg, 0.75, 1, 0, 1),
+            160,
+          )
+        }
+
+        // remove
+        if (prg >= 1) {
+          deckController.drawPrgs.shift()
+          di--
+        }
+      }
 
       // is shuffling? show dummy count
       if (deckController.flyers.length > 0) {
         pileCount = deckController.displayPileCount
       }
+
+      // render shuffling flyers
+      for (let fi = 0; fi < deckController.flyers.length; fi++) {
+        let prg = (deckController.flyers[fi] += 0.03) // flyer speed
+
+        // remove
+        if (prg >= 1) {
+          deckController.flyers.shift()
+          fi--
+          deckController.displayPileCount += 1
+          // done shuffling?
+          if (deckController.displayPileCount === cards.discardPile.length) {
+            deckController.flyers = []
+            cards.drawPile = cards.discardPile
+            cards.discardPile = []
+            break
+          }
+        } else if (prg > 0) {
+          const rad = p5.map(prg, 0, 1, p5.HALF_PI, p5.PI)
+          const x = p5.cos(rad) * 200
+          const y = p5.sin(rad) * 100
+          p5.image(cardBackside, 730 + x, 180 + y, 100, 160)
+        }
+      }
+
       // render pile count
       customFont.render("" + pileCount, 480, 260, 22, p5.color(250), p5)
-
-      // test hand
-      p5.image(cardBackside, 500, 480, 100, 160)
+    },
+    renderHand: () => {
+      const p5 = this.p5
+      const deckController = this.deckController
+      const hand = deckController.cards.hand
+      for (let i = 0; i < hand.length - deckController.drawPrgs.length; i++) {
+        const card = hand[i]
+        p5.image(card.imageData, 75 + i * 90, 500, 100, 160)
+      }
     },
   }
 
@@ -486,22 +601,21 @@ export default class PlayScene {
     this.projectController.hitController.laser = null
     this.projectController.hitController.flyer = null
 
-    this.deckController.flyers = []
-    this.deckController.delay = 60 // delay before shuffle
-
-    this.cards = {
+    this.deckController.cards = {
       drawPile: [],
       discardPile: [],
       hand: [],
       selectedCards: [],
     }
     // fill discardPile with default cards
-    this.cards.discardPile = originalCards.map((oc, index) => ({
+    const cardImages = this.loadScene.cardImages
+    this.deckController.cards.discardPile = originalCards.map((oc, index) => ({
       oc,
       power: 5,
-      index: index,
+      imageData: cardImages[index],
       squishPrg: 1,
       flipPrg: 1,
+      spawnPrg: 0,
     }))
 
     // add starting projects
@@ -511,33 +625,23 @@ export default class PlayScene {
         allSubjectTypes.splice(this.p5.random() * allSubjectTypes.length, 1)[0],
       )
     }
+
+    this.deckController.startDrawing()
   }
 
   draw() {
-    const { p5, loadScene, projectController } = this
+    const { p5, loadScene, projectController, deckController } = this
     p5.cursor(p5.ARROW)
     p5.image(loadScene.backgroundImage, 300, 300, 600, 600)
 
-    this.deckController.renderDrawPile()
-
     projectController.renderProjects()
+
+    deckController.renderHand()
+    deckController.renderDrawPile()
+
     projectController.renderLaser()
     this.statsController.render()
     projectController.renderFlyer()
-
-    // const Y_POSITONS = projectController.Y_POSITONS
-    // p5.stroke(255)
-    // p5.strokeWeight(10)
-    // for (let i = 0; i < Y_POSITONS.length; i++) {
-    //   p5.point(150, Y_POSITONS[i])
-    // }
-
-    // p5.noFill()
-    // p5.stroke(255, 255, 0, 100)
-    // p5.arc(305, 50, 310, 330, 0, p5.PI)
-    // p5.arc(300, 50, 320, 440, 0, p5.PI - 0.6)
-    // p5.arc(280, 50, 360, 550, 0, p5.PI - 0.95)
-    // p5.arc(270, 50, 380, 660, 0, p5.PI - 1.15)
   }
 
   keyReleased() {
