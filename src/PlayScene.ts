@@ -8,7 +8,6 @@ type PlayingCard = {
   oc: OriginalCard
   power: number
   imageData: P5.Image
-  squishPrg: number
 }
 
 type Project = {
@@ -28,6 +27,23 @@ type Project = {
 //   projectCenter: PositionType
 //   isCharging: boolean
 // }
+
+type SelectableCard = {
+  isSelected: boolean
+  outlinePrg: number
+  moveUpPrg: number
+  starPrg: number
+  squishPrg: number
+  slidePrg: number
+  slideAmount: number // 0 is same position
+}
+
+type SelectController = {
+  selectableCards: SelectableCard[]
+  hoveredIndex: number | null
+  discardPrg: number | null // not discarding if is null
+  isNotActionable: () => boolean
+}
 
 type StatsController = {
   bouncePrg: number
@@ -187,17 +203,10 @@ export default class PlayScene {
         moveUpPrg: 1,
       })
     },
+    // no safe exit
     damage: (subject, hitAmount) => {
       const projectController = this.projectController
       const queue = projectController.queue
-      /// USE THIS ON INPUT: block action if target still exists OR laser still exists OR last project is still spawning
-      if (
-        projectController.hitController.target ||
-        projectController.hitController.laser ||
-        queue[queue.length - 1].spawnPrg < 2
-      ) {
-        return // safe exit if target is still there OR last project is still spawning
-      }
       let project!: Project
       for (let i = 0; i < queue.length; i++) {
         if (queue[i].subject === subject) {
@@ -487,7 +496,6 @@ export default class PlayScene {
           // hand full? stop
           else {
             deckController.isDrawing = false
-            console.log("done drawing")
           }
         }
       }
@@ -534,6 +542,7 @@ export default class PlayScene {
             100 * p5.map(easedPrg, 0.75, 1, 0, 1),
             160,
           )
+          /// also render power & ability icon
         }
 
         // remove
@@ -577,12 +586,83 @@ export default class PlayScene {
     },
     renderHand: () => {
       const p5 = this.p5
+      const { mx, my } = this.gc
       const deckController = this.deckController
+      const selectController = this.selectController
       const hand = deckController.cards.hand
-      for (let i = 0; i < hand.length - deckController.drawPrgs.length; i++) {
-        const card = hand[i]
-        p5.image(card.imageData, 75 + i * 90, 500, 100, 160)
+
+      // set hoveredIndex (if actionable, if within y)
+      selectController.hoveredIndex = null
+      if (!selectController.isNotActionable()) {
+        if (my > 500 - 110 && my < 500 + 80) {
+          for (let hi = 0; hi < hand.length; hi++) {
+            const x = 75 + hi * 90
+            if (mx >= x - 45 && mx <= x + 45) {
+              this.selectController.hoveredIndex = hi
+              p5.cursor(p5.HAND)
+              break
+            }
+          }
+        }
       }
+
+      const rLength = hand.length - deckController.drawPrgs.length
+      for (let i = 0; i < rLength; i++) {
+        const card = hand[i]
+        const selectableCard = selectController.selectableCards[i]
+
+        // update outlinePrg
+        if (selectController.hoveredIndex === i) {
+          selectableCard.outlinePrg = p5.min(selectableCard.outlinePrg + 0.2, 1)
+        } else {
+          selectableCard.outlinePrg = p5.max(selectableCard.outlinePrg - 0.2, 0)
+        }
+
+        // update moveUpPrg
+        if (selectableCard.isSelected) {
+          selectableCard.moveUpPrg = p5.min(selectableCard.moveUpPrg + 0.15, 1)
+        } else {
+          selectableCard.moveUpPrg = p5.max(selectableCard.moveUpPrg - 0.15, 0)
+        }
+
+        p5.push()
+        p5.translate(75 + i * 90, 500 - selectableCard.moveUpPrg * 30)
+
+        // render outline
+        if (selectableCard.outlinePrg > 0) {
+          p5.noFill()
+          p5.stroke(250)
+          p5.strokeWeight(selectableCard.outlinePrg * 5)
+          p5.rect(0, 0, 100, 160, 20)
+        }
+
+        // render card image
+        p5.image(card.imageData, 0, 0, 100, 160)
+        p5.pop()
+      }
+    },
+  }
+
+  selectController: SelectController = {
+    selectableCards: [],
+    hoveredIndex: null,
+    discardPrg: null,
+    isNotActionable: () => {
+      const projectController = this.projectController
+      const queue = projectController.queue
+
+      // project has a target or laser?
+      // last project is still spawning?
+      // is drawing (& shuffling)?
+      // is animating drawing?
+      // is discarding? /////
+      return !!(
+        projectController.hitController.target ||
+        projectController.hitController.laser ||
+        queue[queue.length - 1].spawnPrg < 2 ||
+        this.deckController.isDrawing ||
+        this.deckController.drawPrgs.length !== 0
+      )
     },
   }
 
@@ -600,6 +680,19 @@ export default class PlayScene {
     this.projectController.hitController.target = null
     this.projectController.hitController.laser = null
     this.projectController.hitController.flyer = null
+
+    this.selectController.selectableCards = []
+    for (let i = 0; i < 6; i++) {
+      this.selectController.selectableCards.push({
+        isSelected: false,
+        outlinePrg: 0,
+        moveUpPrg: 0,
+        starPrg: 0,
+        squishPrg: 0,
+        slidePrg: 1,
+        slideAmount: 0,
+      })
+    }
 
     this.deckController.cards = {
       drawPile: [],
@@ -646,6 +739,7 @@ export default class PlayScene {
 
   keyReleased() {
     const keyCode = this.p5.keyCode
+    if (this.selectController.isNotActionable()) return
     if (keyCode === 49) {
       this.projectController.damage(this.projectController.queue[0].subject, 15)
     } else if (keyCode === 50) {
@@ -661,8 +755,20 @@ export default class PlayScene {
   }
 
   click() {
-    const gc = this.gc
-    const { mx, my } = gc
+    const selectController = this.selectController
+    if (selectController.isNotActionable()) {
+      return
+    }
+
+    // selecting a card
+    if (selectController.hoveredIndex !== null) {
+      selectController.selectableCards[
+        selectController.hoveredIndex
+      ].isSelected =
+        !selectController.selectableCards[selectController.hoveredIndex]
+          .isSelected
+      return
+    }
   }
 }
 
