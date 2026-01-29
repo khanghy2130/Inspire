@@ -562,10 +562,11 @@ export default class LoadScene {
         break
       // by random
       case 4:
-        p5.noStroke()
-        p5.fill(20)
+        p5.stroke(0)
+        p5.strokeWeight(3)
+        p5.fill(250)
         p5.ellipse(0, 0, 40, 40)
-        customFont.render("?", -10, 13, 24, p5.color(250), p5)
+        customFont.render("?", -10, 13, 24, p5.color(20), p5)
         break
     }
     p5.pop()

@@ -40,9 +40,11 @@ type SelectableCard = {
 
 type SelectController = {
   selectableCards: SelectableCard[]
+  starIndices: number[]
   hoveredIndex: number | null
   discardPrg: number | null // not discarding if is null
   isNotActionable: () => boolean
+  getInspiredIndices: (indexInHand: number) => number[]
 }
 
 type StatsController = {
@@ -542,7 +544,7 @@ export default class PlayScene {
             100 * p5.map(easedPrg, 0.75, 1, 0, 1),
             160,
           )
-          /// also render power & ability icon
+          /// also render power
         }
 
         // remove
@@ -606,6 +608,14 @@ export default class PlayScene {
         }
       }
 
+      if (selectController.hoveredIndex !== null) {
+        selectController.starIndices = selectController.getInspiredIndices(
+          selectController.hoveredIndex,
+        )
+      } else {
+        selectController.starIndices = []
+      }
+
       const rLength = hand.length - deckController.drawPrgs.length
       for (let i = 0; i < rLength; i++) {
         const card = hand[i]
@@ -625,6 +635,13 @@ export default class PlayScene {
           selectableCard.moveUpPrg = p5.max(selectableCard.moveUpPrg - 0.15, 0)
         }
 
+        // update starPrg
+        if (selectController.starIndices.includes(i)) {
+          selectableCard.starPrg = p5.min(selectableCard.starPrg + 0.2, 1)
+        } else {
+          selectableCard.starPrg = p5.max(selectableCard.starPrg - 0.2, 0)
+        }
+
         p5.push()
         p5.translate(75 + i * 90, 500 - selectableCard.moveUpPrg * 30)
 
@@ -638,6 +655,15 @@ export default class PlayScene {
 
         // render card image
         p5.image(card.imageData, 0, 0, 100, 160)
+
+        //// render power
+
+        // render star
+        const starSize = selectableCard.starPrg * 30
+        if (starSize > 0) {
+          p5.image(this.loadScene.starImage, 0, -100, starSize, starSize)
+        }
+
         p5.pop()
       }
     },
@@ -645,8 +671,83 @@ export default class PlayScene {
 
   selectController: SelectController = {
     selectableCards: [],
+    starIndices: [],
     hoveredIndex: null,
     discardPrg: null,
+    getInspiredIndices: (indexInHand) => {
+      const indices: number[] = []
+
+      const hand = this.deckController.cards.hand
+      const card = hand[indexInHand]
+      const ability = card.oc.ability
+
+      if (ability === 0) {
+        // byName
+        for (let i = 0; i < hand.length; i++) {
+          if (i === indexInHand) {
+            continue
+          }
+          if (hand[i].oc.name[0] === card.oc.name[0]) {
+            indices.push(i)
+          }
+        }
+      } else if (ability === 1) {
+        // byBody
+        for (let i = 0; i < hand.length; i++) {
+          if (i === indexInHand) {
+            continue
+          }
+          if (hand[i].oc.body === card.oc.body) {
+            indices.push(i)
+          }
+        }
+      } else if (ability === 2) {
+        // byGender
+        for (let i = 0; i < hand.length; i++) {
+          if (i === indexInHand) {
+            continue
+          }
+          if (hand[i].oc.isMale === card.oc.isMale) {
+            return [i] // only 1 inspired card
+          }
+        }
+      } else if (ability === 3) {
+        // bySubject
+        for (let i = 0; i < hand.length; i++) {
+          if (i === indexInHand) {
+            continue
+          }
+          if (hand[i].oc.subject === card.oc.subject) {
+            // adjacent?
+            if (i === indexInHand + 1 || i === indexInHand - 1) {
+              indices.push(i)
+            }
+          }
+        }
+      } else if (ability === 4) {
+        // byRandom
+        const p5 = this.p5
+        if (this.selectController.isNotActionable()) {
+          // true random
+          while (true) {
+            const pickedIndex = p5.floor(p5.random() * hand.length)
+            if (pickedIndex !== indexInHand) {
+              return [pickedIndex]
+            }
+          }
+        } else {
+          // looping
+          const pickedIndex = p5.floor(p5.frameCount * 0.04) % 6
+          if (pickedIndex !== indexInHand) {
+            return [pickedIndex]
+          } else {
+            return [] // skip if is self
+          }
+        }
+      }
+
+      return indices
+    },
     isNotActionable: () => {
       const projectController = this.projectController
       const queue = projectController.queue
@@ -654,8 +755,8 @@ export default class PlayScene {
       // project has a target or laser?
       // last project is still spawning?
       // is drawing (& shuffling)?
-      // is animating drawing?
-      // is discarding? /////
+      // is animating drawing? (delayed if is discarding)
+      /////// is hitting?
       return !!(
         projectController.hitController.target ||
         projectController.hitController.laser ||
@@ -682,6 +783,7 @@ export default class PlayScene {
     this.projectController.hitController.flyer = null
 
     this.selectController.selectableCards = []
+    this.selectController.starIndices = []
     for (let i = 0; i < 6; i++) {
       this.selectController.selectableCards.push({
         isSelected: false,
