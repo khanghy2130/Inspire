@@ -18,22 +18,12 @@ type Project = {
   moveUpPrg: number
 }
 
-// animating deployed card outside of projectController
-// deployed: {
-//   card: PlayingCard
-//   targetRotation: number
-//   startPos: PositionType
-//   currentPos: PositionType
-//   projectCenter: PositionType
-//   isCharging: boolean
-// }
-
 type SelectableCard = {
   isSelected: boolean
   outlinePrg: number
   moveUpPrg: number
   starPrg: number
-  squishPrg: number
+  inspirePrg: number
   slideAmount: number // 0 is same position
 }
 
@@ -44,7 +34,16 @@ type SelectController = {
   discardPrg: number | null // not discarding if is null
   controlSectionPrg: number
   previousSelectedCount: number
+
+  assignInfo: {
+    isGoingToHit: boolean
+    curDist: number
+    dir: number
+    dist: number
+  } | null
+
   discardClicked: () => void
+  assignClicked: () => void
   getInspiredIndices: (indexInHand: number) => number[]
   isNotActionable: () => boolean
   renderControlSection: () => void
@@ -117,6 +116,14 @@ export default class PlayScene {
   gc: GameClient
   p5!: P5
   loadScene!: LoadScene
+
+  gameIsOver: boolean = false
+  checkGameIsOver: () => boolean = () => {
+    return (
+      this.statsController.energy === 0 ||
+      this.statsController.completedAmount === 20
+    )
+  }
 
   statsController: StatsController = {
     bouncePrg: 1,
@@ -245,6 +252,8 @@ export default class PlayScene {
       let doesRemoveTarget = false
 
       // all projects
+      const whiteColor = p5.color(250)
+      const blackColor = p5.color(0)
       for (let i = 0; i < queue.length; i++) {
         const project = queue[i]
 
@@ -357,6 +366,17 @@ export default class PlayScene {
         }
 
         // contents (hp display number is real hp + draining if is hit target)
+        const displayHP = p5.round(
+          project.hp +
+            (isTarget
+              ? (target.previousHP - project.hp) *
+                (1 - easeOutCubic(p5.max(target.drainPrg, 0)))
+              : 0),
+        )
+
+        const hpX = _x + 230 - customFont.getNumHalfWidth(displayHP + "", 26)
+        customFont.render(displayHP + "", hpX + 2, _y + 65, 26, blackColor, p5)
+        customFont.render(displayHP + "", hpX, _y + 63, 26, whiteColor, p5)
       }
 
       if (doesRemoveTarget && target) {
@@ -694,6 +714,40 @@ export default class PlayScene {
           500 - selectableCard.moveUpPrg * 30 + discardYOffset,
         )
 
+        // hitting transformation
+        if (selectController.assignInfo !== null && selectableCard.isSelected) {
+          const assignInfo = selectController.assignInfo
+          // update curDist
+          const speed = 3 + assignInfo.dist * 0.02 // bonus speed for longer dist
+          if (assignInfo.isGoingToHit) {
+            assignInfo.curDist = p5.min(
+              assignInfo.curDist + speed,
+              assignInfo.dist,
+            )
+            // would hit? deal damage, then go back
+            if (assignInfo.curDist >= assignInfo.dist) {
+              assignInfo.isGoingToHit = false
+              this.projectController.damage(card.oc.subject, card.power)
+            }
+          } else {
+            assignInfo.curDist = p5.max(assignInfo.curDist - speed, 0)
+            // back to 0? done
+            if (assignInfo.curDist <= 0) {
+              selectController.assignInfo = null
+              console.log("done hitting, now inspire")
+            }
+          }
+
+          p5.translate(
+            p5.cos(assignInfo.dir) * assignInfo.curDist,
+            p5.sin(assignInfo.dir) * assignInfo.curDist,
+          )
+          p5.rotate(
+            ((assignInfo.dir + p5.HALF_PI) / assignInfo.dist) *
+              assignInfo.curDist,
+          )
+        }
+
         // render outline
         if (selectableCard.outlinePrg > 0) {
           p5.noFill()
@@ -725,9 +779,11 @@ export default class PlayScene {
     discardPrg: null,
     controlSectionPrg: 0,
     previousSelectedCount: 0,
+    assignInfo: null,
     discardClicked: () => {
       const selectController = this.selectController
       selectController.discardPrg = 0
+      this.statsController.energy--
       // set slideAmount
       const copy = selectController.selectableCards
         .slice()
@@ -738,6 +794,42 @@ export default class PlayScene {
         if (index !== -1) {
           sCard.slideAmount = index - j
         }
+      }
+    },
+    assignClicked: () => {
+      const p5 = this.p5
+      this.statsController.energy--
+
+      let selectedIndex!: number
+      for (let i = 0; i < this.selectController.selectableCards.length; i++) {
+        if (this.selectController.selectableCards[i].isSelected) {
+          selectedIndex = i
+          break
+        }
+      }
+      const assignedCard = this.deckController.cards.hand[selectedIndex]
+
+      let projectIndex!: number
+      for (let j = 0; j < this.projectController.queue.length; j++) {
+        if (
+          this.projectController.queue[j].subject === assignedCard.oc.subject
+        ) {
+          projectIndex = j
+          break
+        }
+      }
+
+      const startPos: PositionType = [75 + selectedIndex * 90, 470] // 500 - 30 = 470
+      const endPos: PositionType = [
+        150,
+        this.projectController.Y_POSITONS[projectIndex],
+      ]
+
+      this.selectController.assignInfo = {
+        isGoingToHit: true,
+        curDist: 0,
+        dir: p5.atan2(endPos[1] - startPos[1], endPos[0] - startPos[0]),
+        dist: p5.dist(startPos[0], startPos[1], endPos[0], endPos[1]) - 80, // -half_card_height
       }
     },
     getInspiredIndices: (indexInHand) => {
@@ -823,14 +915,17 @@ export default class PlayScene {
       // is drawing (& shuffling)?
       // is animating drawing?
       // is discarding?
-      /////// is hitting?
+      // is hitting?
+      // game is over?
       return !!(
         projectController.hitController.target ||
         projectController.hitController.laser ||
         queue[queue.length - 1].spawnPrg < 2 ||
         this.deckController.isDrawing ||
         this.deckController.drawPrgs.length !== 0 ||
-        this.selectController.discardPrg !== null
+        this.selectController.discardPrg !== null ||
+        this.selectController.assignInfo !== null ||
+        this.checkGameIsOver()
       )
     },
     renderControlSection: () => {
@@ -901,6 +996,7 @@ export default class PlayScene {
 
   setup() {
     // reset
+    this.gameIsOver = false
     this.statsController.energy = 10
     this.statsController.completedAmount = 0
 
@@ -918,7 +1014,7 @@ export default class PlayScene {
         outlinePrg: 0,
         moveUpPrg: 0,
         starPrg: 0,
-        squishPrg: 0,
+        inspirePrg: 0,
         slideAmount: 0,
       })
     }
@@ -1012,252 +1108,8 @@ export default class PlayScene {
     let discardBtn = this.gc.buttons[2]
     if (selectedCount === 1 && assignBtn.isHovered) {
       assignBtn.clicked()
-      this.projectController.damage(this.projectController.queue[0].subject, 15) ///
     } else if (selectedCount > 1 && discardBtn.isHovered) {
       discardBtn.clicked()
     }
   }
 }
-
-/*
-
-type TestPlayingCard = {
-  oc: OriginalCard
-  power: number
-  index: number
-}
-
-type TestProject = {
-  subject: SubjectType
-  hp: number
-  maxHp: number
-}
-
-export default class PlayScene {
-  gc: GameClient
-  p5!: P5
-  loadScene!: LoadScene
-
-  // quick prototype
-  drawPile: TestPlayingCard[] = []
-  discardPile: TestPlayingCard[] = []
-  hand: TestPlayingCard[] = []
-  projectsList: TestProject[] = []
-
-  selectedCards: TestPlayingCard[] = []
-
-  energy: number = 0
-  completedAmount: number = 0
-  projectMaxHP: number = 10
-
-  constructor(gameClient: GameClient) {
-    this.gc = gameClient
-  }
-
-  setup() {
-    // reset
-    this.energy = 10
-    this.projectMaxHP = 10
-    this.completedAmount = 0
-    this.hand = []
-    this.discardPile = []
-    this.projectsList = []
-    this.drawPile = originalCards.map((oc, index) => ({
-      oc,
-      power: 5,
-      index: index,
-    }))
-
-    this.testDrawToFillHand()
-
-    const allSubjectTypes: SubjectType[] = [0, 1, 2, 3]
-    while (allSubjectTypes.length > 0) {
-      this.testAddProject(
-        allSubjectTypes.splice(this.p5.random() * allSubjectTypes.length, 1)[0],
-      )
-    }
-  }
-
-  testAddProject(subject: SubjectType) {
-    const pl = this.projectsList
-    // set maxHp to previous maxHP +x
-    const newMaxHP = this.projectMaxHP
-    this.projectMaxHP += 5
-    pl.push({
-      hp: newMaxHP,
-      maxHp: newMaxHP,
-      subject,
-    })
-  }
-
-  testShuffle() {
-    // discardPile becomes drawPile
-    this.drawPile = this.discardPile
-    this.discardPile = []
-  }
-
-  testDrawToFillHand() {
-    while (this.hand.length < 6) {
-      // reshuffle if needed
-      if (this.drawPile.length === 0) {
-        this.testShuffle()
-      }
-      // draw a random card from drawPile
-      this.hand.push(
-        this.drawPile.splice(
-          this.p5.floor(this.p5.random() * this.drawPile.length),
-          1,
-        )[0],
-      )
-    }
-  }
-
-  testSelectCard(card: TestPlayingCard) {
-    const scs = this.selectedCards
-    const indexOfCard = scs.indexOf(card)
-    if (indexOfCard === -1) {
-      scs.push(card)
-    } else {
-      scs.splice(indexOfCard, 1)
-    }
-  }
-
-  draw() {
-    const { p5, loadScene } = this
-    p5.cursor(p5.ARROW)
-    p5.image(loadScene.backgroundImage, 300, 300, 600, 600)
-
-    // render texts
-    p5.textSize(20)
-    p5.noStroke()
-    p5.fill(240, 210, 100)
-    p5.text(
-      `Energy: ${this.energy}\nCompleted: ${this.completedAmount}\nDraw pile: ${this.drawPile.length}`,
-      500,
-      100,
-    )
-
-    // render projects
-    p5.textSize(40)
-    for (let i = 0; i < this.projectsList.length; i++) {
-      const project = this.projectsList[i]
-      p5.fill(loadScene.SUBJECT_COLORS[project.subject])
-      p5.text(`HP: ${project.hp}`, 100, 100 + i * 50)
-    }
-
-    // render hand
-    p5.textSize(30)
-    for (let i = 0; i < this.hand.length; i++) {
-      const card = this.hand[i]
-      const x = 75 + i * 90
-      if (this.selectedCards.includes(card)) {
-        p5.noFill()
-        p5.stroke(250)
-        p5.strokeWeight(5)
-        p5.rect(x, 500, 100, 160, 20)
-      }
-      p5.image(loadScene.cardImages[card.index], x, 500, 100, 160)
-      // power
-      p5.stroke(0)
-      p5.strokeWeight(5)
-      p5.fill(250)
-      p5.text(card.power, x - 20, 450)
-      let eligibleCount: number | null = null
-      if (card.oc.ability === 0) {
-        // byName
-        eligibleCount = this.drawPile.reduce(
-          (count, drawC) =>
-            count + (drawC.oc.name[0] === card.oc.name[0] ? 1 : 0),
-          0,
-        )
-      } else if (card.oc.ability === 1) {
-        // byBody
-        eligibleCount = this.drawPile.reduce(
-          (count, drawC) => count + (drawC.oc.body === card.oc.body ? 1 : 0),
-          0,
-        )
-      } else if (card.oc.ability === 3) {
-        // bySubject
-        eligibleCount = this.drawPile.reduce(
-          (count, drawC) =>
-            count + (drawC.oc.subject === card.oc.subject ? 1 : 0),
-          0,
-        )
-      }
-      if (eligibleCount !== null) {
-        p5.text(eligibleCount, x, 500)
-      }
-    }
-  }
-
-  keyReleased() {
-    const keyCode = this.p5.keyCode
-
-    const scs = this.selectedCards
-    if (scs.length > 0) {
-      // I: inspire
-      if (keyCode === 73) {
-        scs.forEach((c) => (c.power += 5))
-      }
-      // P: play
-      else if (keyCode === 80) {
-        // only if selected 1 card
-        if (scs.length > 1) return
-        const sCard = scs[0]
-        this.energy--
-        // hit project
-        for (let i = 0; i < this.projectsList.length; i++) {
-          const project = this.projectsList[i]
-          if (project.subject !== sCard.oc.subject) continue
-          project.hp -= sCard.power
-          // completed project? replace with new project
-          if (project.hp <= 0) {
-            this.completedAmount++
-            this.energy += 3
-            // extra turn if hp is exactly 0
-            if (project.hp === 0) this.energy += 1
-            this.projectsList.splice(i, 1)
-            this.testAddProject(project.subject)
-            break
-          }
-        }
-        // >>> discard played card
-        // remove card from hand
-        this.hand.splice(this.hand.indexOf(sCard), 1)
-        // add to discard pile
-        this.discardPile.push(sCard)
-        this.testDrawToFillHand() // draw new card
-        this.selectedCards = [] // deselect all
-      }
-      // D: discard
-      else if (keyCode === 68) {
-        if (scs.length === 1) return // can't discard exactly 1 card
-        this.energy--
-        while (scs.length > 0) {
-          const sCard = scs.shift() as TestPlayingCard
-          // remove card from hand
-          this.hand.splice(this.hand.indexOf(sCard), 1)
-          // add to discard pile
-          this.discardPile.push(sCard)
-        }
-        this.testDrawToFillHand() // draw new cards
-      }
-    }
-  }
-
-  click() {
-    const gc = this.gc
-    const { mx, my } = gc
-    // selecting a card
-    for (let i = 0; i < this.hand.length; i++) {
-      const x = 75 + i * 90
-      if (mx < x + 50 && mx > x - 50 && my < 500 + 80 && my > 500 - 80) {
-        this.testSelectCard(this.hand[i])
-        return
-      }
-    }
-  }
-}
-
-
-*/

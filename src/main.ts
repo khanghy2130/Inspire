@@ -121,7 +121,7 @@ export default class GameClient {
               "assign",
               22,
               p5.color(40, 200, 20),
-              playScene.selectController.discardClicked,
+              playScene.selectController.assignClicked,
             ],
             [
               460,
