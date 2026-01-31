@@ -28,7 +28,6 @@ type SelectableCard = {
   outlinePrg: number
   moveUpPrg: number
   starPrg: number
-  inspirePrg: number
   slideAmount: number // 0 is same position
 }
 
@@ -40,7 +39,16 @@ type SelectController = {
   controlSectionPrg: number
   previousSelectedCount: number
 
+  inspireInfo: {
+    state: "giver" | "laser" | "taker"
+    prg: number
+    takerIndices: number[]
+    hasBuffed: boolean
+    projectIsCompleted: boolean
+  } | null
+
   assignInfo: {
+    projectIsCompleted: boolean
     isGoingToHit: boolean
     curDist: number
     dir: number
@@ -248,6 +256,10 @@ export default class PlayScene {
         drainPrg: -1,
         isCompleted,
         isPerfect,
+      }
+      // pass to assignInfo
+      if (this.selectController.assignInfo) {
+        this.selectController.assignInfo.projectIsCompleted = isCompleted
       }
     },
     renderProjects: () => {
@@ -568,7 +580,7 @@ export default class PlayScene {
       // render cards being drawn
       const backsideImage = this.loadScene.cardBackside
       for (let di = 0; di < deckController.drawPrgs.length; di++) {
-        deckController.drawPrgs[di] += 0.02
+        deckController.drawPrgs[di] += 0.017
         const prg = deckController.drawPrgs[di]
 
         const handIndex =
@@ -596,6 +608,7 @@ export default class PlayScene {
         }
         // 0.75 to 1 face side flipping
         else {
+          //// use translate & scale
           p5.image(
             card.imageData,
             x,
@@ -678,7 +691,7 @@ export default class PlayScene {
 
       // update discardPrg
       if (selectController.discardPrg !== null) {
-        selectController.discardPrg += 0.03
+        selectController.discardPrg += 0.02
         // done discarding?
         if (selectController.discardPrg >= 1) {
           selectController.discardPrg = null
@@ -703,6 +716,42 @@ export default class PlayScene {
           }
           // trigger draw
           deckController.startDrawing(0)
+        }
+      }
+
+      // update inspire prg
+      let inspireInfo = selectController.inspireInfo
+      if (inspireInfo) {
+        // laser prg speed? else card flip speed
+        if (inspireInfo.state === "laser") {
+          inspireInfo.prg += 0.01
+        } else {
+          inspireInfo.prg += 0.02
+        }
+        // apply power buff (at precisely prg 0.75 & not already buffed)
+        if (
+          inspireInfo.state === "taker" &&
+          inspireInfo.prg >= 0.75 &&
+          !inspireInfo.hasBuffed
+        ) {
+          inspireInfo.hasBuffed = true
+          for (let i = 0; i < inspireInfo.takerIndices.length; i++) {
+            hand[inspireInfo.takerIndices[i]].power +=
+              inspireInfo.projectIsCompleted ? 10 : 5
+          }
+        }
+        if (inspireInfo.prg >= 1) {
+          // next state?
+          inspireInfo.prg = 0
+          if (inspireInfo.state === "giver") {
+            inspireInfo.state = "laser"
+            ///// spawn lasers
+          } else if (inspireInfo.state === "laser") {
+            inspireInfo.state = "taker"
+          } else if (inspireInfo.state === "taker") {
+            selectController.inspireInfo = null
+            inspireInfo = null // clear local as well
+          }
         }
       }
 
@@ -754,23 +803,53 @@ export default class PlayScene {
         if (selectController.assignInfo !== null && selectableCard.isSelected) {
           const assignInfo = selectController.assignInfo
           // update curDist
-          const speed = 2 + assignInfo.dist * 0.018 // bonus speed for longer dist
+          const speed = 3 + assignInfo.dist * 0.018 // bonus speed for longer dist
           if (assignInfo.isGoingToHit) {
-            assignInfo.curDist = p5.min(
-              assignInfo.curDist + speed,
-              assignInfo.dist,
-            )
-            // would hit? deal damage, then go back
-            if (assignInfo.curDist >= assignInfo.dist) {
-              assignInfo.isGoingToHit = false
+            // slower speed if is squishing
+            if (assignInfo.dist - assignInfo.curDist < 40) {
+              assignInfo.curDist = p5.min(
+                assignInfo.curDist + 3,
+                assignInfo.dist,
+              )
+            } else {
+              assignInfo.curDist = p5.min(
+                assignInfo.curDist + speed,
+                assignInfo.dist,
+              )
+            }
+            // start damage (if currently no target)
+            if (
+              assignInfo.curDist >= assignInfo.dist - 40 &&
+              !this.projectController.hitController.target
+            ) {
               this.projectController.damage(card.oc.subject, card.power)
             }
+            // go back
+            else if (assignInfo.curDist >= assignInfo.dist) {
+              assignInfo.isGoingToHit = false
+            }
           } else {
-            assignInfo.curDist = p5.max(assignInfo.curDist - speed, 0)
+            // slower speed if is squishing
+            if (assignInfo.dist - assignInfo.curDist < 40) {
+              assignInfo.curDist = p5.max(assignInfo.curDist - 3, 0)
+            } else {
+              assignInfo.curDist = p5.max(assignInfo.curDist - speed, 0)
+            }
             // back to 0? done
             if (assignInfo.curDist <= 0) {
               selectController.assignInfo = null
-              console.log("done hitting, now inspire")
+
+              const takerIndices = selectController.getInspiredIndices(i)
+              // trigger inspire if there are takers
+              if (takerIndices.length > 0) {
+                selectController.inspireInfo = {
+                  projectIsCompleted: assignInfo.projectIsCompleted,
+                  hasBuffed: false,
+                  state: "giver",
+                  prg: -0.3, // initial delay
+                  takerIndices: takerIndices,
+                }
+              }
             }
           }
 
@@ -785,6 +864,50 @@ export default class PlayScene {
           const scaleFactor =
             p5.min((assignInfo.dist - assignInfo.curDist) / 40, 1) * 0.5
           p5.scale(1.5 - scaleFactor, 0.5 + scaleFactor)
+        }
+
+        // inspiring transformation (if is inspiring & initial delay)
+        if (inspireInfo && inspireInfo.prg > 0) {
+          // is giver or is taker?
+          if (
+            (inspireInfo.state === "giver" && selectableCard.isSelected) ||
+            (inspireInfo.state === "taker" &&
+              inspireInfo.takerIndices.includes(i))
+          ) {
+            const doubleFlipPrg = inspireInfo.prg
+            // closing face up 0 - 0.25
+            if (doubleFlipPrg < 0.25) {
+              p5.scale(p5.map(doubleFlipPrg, 0, 0.25, 1, 0), 1)
+            }
+            // opening back 0.25 - 0.5
+            else if (doubleFlipPrg < 0.5) {
+              p5.image(
+                this.loadScene.cardBackside,
+                0,
+                0,
+                100 * p5.map(doubleFlipPrg, 0.25, 0.5, 0, 1),
+                160,
+              )
+              p5.pop() // early pop
+              continue
+            }
+            // closing back 0.5 - 0.75
+            else if (doubleFlipPrg < 0.75) {
+              p5.image(
+                this.loadScene.cardBackside,
+                0,
+                0,
+                100 * p5.map(doubleFlipPrg, 0.5, 0.75, 1, 0),
+                160,
+              )
+              p5.pop() // early pop
+              continue
+            }
+            // opening face up 0.75 - 1
+            else if (doubleFlipPrg < 1) {
+              p5.scale(p5.map(doubleFlipPrg, 0.75, 1, 0, 1), 1)
+            }
+          }
         }
 
         // render outline
@@ -818,6 +941,7 @@ export default class PlayScene {
     discardPrg: null,
     controlSectionPrg: 0,
     previousSelectedCount: 0,
+    inspireInfo: null,
     assignInfo: null,
     discardClicked: () => {
       const selectController = this.selectController
@@ -865,6 +989,7 @@ export default class PlayScene {
       ]
 
       this.selectController.assignInfo = {
+        projectIsCompleted: false,
         isGoingToHit: true,
         curDist: 0,
         dir: p5.atan2(endPos[1] - startPos[1], endPos[0] - startPos[0]),
@@ -947,14 +1072,17 @@ export default class PlayScene {
     },
     isNotActionable: () => {
       const projectController = this.projectController
+      const selectController = this.selectController
       const queue = projectController.queue
 
-      // project has a target or laser?
+      // project has a target
+      // project has laser?
       // last project is still spawning?
       // is drawing (& shuffling)?
       // is animating drawing?
       // is discarding?
       // is hitting?
+      // is inspiring?
       // game is over?
       return !!(
         projectController.hitController.target ||
@@ -962,8 +1090,9 @@ export default class PlayScene {
         queue[queue.length - 1].spawnPrg < 2 ||
         this.deckController.isDrawing ||
         this.deckController.drawPrgs.length !== 0 ||
-        this.selectController.discardPrg !== null ||
-        this.selectController.assignInfo !== null ||
+        selectController.discardPrg !== null ||
+        selectController.assignInfo ||
+        selectController.inspireInfo ||
         this.checkGameIsOver()
       )
     },
@@ -1053,7 +1182,6 @@ export default class PlayScene {
         outlinePrg: 0,
         moveUpPrg: 0,
         starPrg: 0,
-        inspirePrg: 0,
         slideAmount: 0,
       })
     }
