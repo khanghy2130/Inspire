@@ -133,6 +133,7 @@ export default class PlayScene {
   p5!: P5
   loadScene!: LoadScene
 
+  screenShakePrg: number = 1
   gameIsOver: boolean = false
   checkGameIsOver: () => boolean = () => {
     return (
@@ -270,6 +271,8 @@ export default class PlayScene {
       if (this.selectController.assignInfo) {
         this.selectController.assignInfo.projectIsCompleted = isCompleted
       }
+
+      this.screenShakePrg = 0 // trigger screen shake
     },
     renderProjects: () => {
       const p5 = this.p5
@@ -865,7 +868,7 @@ export default class PlayScene {
         // being discarded animation
         const discardYOffset =
           selectController.discardPrg !== null && selectableCard.isSelected
-            ? easeOutCubic(selectController.discardPrg) * 250
+            ? easeOutCubic(selectController.discardPrg) * 240
             : 0
         // being slided animation
         const discardXOffset =
@@ -1258,6 +1261,7 @@ export default class PlayScene {
 
   setup() {
     // reset
+    this.screenShakePrg = 1
     this.gameIsOver = false
     this.statsController.energy = 10
     this.statsController.completedAmount = 0
@@ -1313,6 +1317,18 @@ export default class PlayScene {
     p5.cursor(p5.ARROW)
     p5.image(loadScene.backgroundImage, 300, 300, 600, 600)
 
+    p5.push()
+    if (this.screenShakePrg < 1) {
+      this.screenShakePrg = p5.min(this.screenShakePrg + 0.012, 1)
+
+      const frequency = 2
+      const f =
+        Math.sin(this.screenShakePrg * Math.PI * 2 * frequency) *
+        Math.pow(1 - this.screenShakePrg, 2)
+
+      p5.translate(0, f * -10)
+    }
+
     this.selectController.renderControlSection()
 
     projectController.renderProjects()
@@ -1323,9 +1339,12 @@ export default class PlayScene {
     projectController.renderLaser()
     this.statsController.render()
     projectController.renderFlyer()
+
+    p5.pop()
   }
 
   keyReleased() {
+    this.screenShakePrg = 0
     const keyCode = this.p5.keyCode
     if (this.selectController.isNotActionable()) return
     if (keyCode === 49) {
