@@ -55,6 +55,8 @@ type SelectController = {
     dist: number
   } | null
 
+  popupBgPrg: number
+
   discardClicked: () => void
   assignClicked: () => void
   getInspiredIndices: (indexInHand: number) => number[]
@@ -1050,6 +1052,7 @@ export default class PlayScene {
     previousSelectedCount: 0,
     inspireInfo: null,
     assignInfo: null,
+    popupBgPrg: 0,
     discardClicked: () => {
       const selectController = this.selectController
       selectController.discardPrg = 0
@@ -1264,16 +1267,143 @@ export default class PlayScene {
       }
     },
     renderHoverPopup: () => {
-      return
       const selectController = this.selectController
+      const p5 = this.p5
+
+      // update popupBgPrg
+      if (selectController.hoveredIndex === null) {
+        selectController.popupBgPrg = p5.max(
+          selectController.popupBgPrg - 0.1,
+          0,
+        )
+      } else {
+        selectController.popupBgPrg = p5.min(
+          selectController.popupBgPrg + 0.1,
+          1,
+        )
+      }
+      // render bg
+      p5.noStroke()
+      p5.fill(0, 200 * selectController.popupBgPrg)
+      p5.rect(300, 65, 600, 130)
+
       if (selectController.hoveredIndex === null) {
         return
       }
-      const p5 = this.p5
+      const loadScene = this.loadScene
+      const oc =
+        this.deckController.cards.hand[selectController.hoveredIndex].oc
+      const subjectName = this.projectController.NAMES[oc.subject]
+      const genderName = oc.isMale ? "male" : "female"
+      const title =
+        oc.name + " - " + genderName + " " + subjectName + " student"
 
-      p5.noStroke()
-      p5.fill(0, 200)
-      p5.rect(300, 75, 600, 150)
+      const whiteColor = p5.color(250)
+      p5.image(loadScene.subjectIconImages[oc.subject], 23, 21, 30, 30)
+      customFont.render(title, 45, 28, 15, whiteColor, p5)
+
+      loadScene.renderAbilityIcon(oc, 30, 55, 0.5)
+      let counter = 0
+      const drawPile = this.deckController.cards.drawPile
+      switch (oc.ability) {
+        case 0:
+          customFont.render(
+            "     inspire other students\nwhose names start with '" +
+              oc.name[0] +
+              "'.",
+            15,
+            63,
+            12,
+            whiteColor,
+            p5,
+          )
+          for (let i = 0; i < drawPile.length; i++) {
+            if (drawPile[i].oc.name[0] === oc.name[0]) {
+              counter++
+              if (counter === 3) {
+                break
+              }
+            }
+          }
+          customFont.render(
+            counter + " left in draw pile.",
+            20,
+            115,
+            16,
+            whiteColor,
+            p5,
+          )
+          break
+        case 1:
+          customFont.render(
+            "      inspire other similar\nlooking students.",
+            15,
+            63,
+            12,
+            whiteColor,
+            p5,
+          )
+          for (let i = 0; i < drawPile.length; i++) {
+            if (drawPile[i].oc.body === oc.body) {
+              counter++
+              if (counter === 3) {
+                break
+              }
+            }
+          }
+          customFont.render(
+            counter + " left in draw pile.",
+            20,
+            115,
+            16,
+            whiteColor,
+            p5,
+          )
+          break
+        case 2:
+          customFont.render(
+            "      inspire the other\nleftmost " + genderName + " student.",
+            15,
+            63,
+            12,
+            whiteColor,
+            p5,
+          )
+          break
+        case 3:
+          customFont.render(
+            "      inspire adjacent\n" + subjectName + " students.",
+            15,
+            63,
+            12,
+            whiteColor,
+            p5,
+          )
+          for (let i = 0; i < drawPile.length; i++) {
+            if (drawPile[i].oc.subject === oc.subject) {
+              counter++
+            }
+          }
+          customFont.render(
+            counter + " left in draw pile.",
+            20,
+            115,
+            16,
+            whiteColor,
+            p5,
+          )
+          break
+        case 4:
+          customFont.render(
+            "     inspire a random\nother student.",
+            15,
+            63,
+            12,
+            whiteColor,
+            p5,
+          )
+          break
+      }
     },
   }
 

@@ -638,6 +638,19 @@ export let customFont = {
           obj.tx += (20 * s) / 50
         }
         break
+      case "'":
+        {
+          ag.noStroke()
+          ag.fill(c)
+          ag.quad(8, -40, 18, -40, 16, -30, 6, -30)
+          ag.triangle(16, -50, 14, -40, 8, -40)
+
+          ag.quad(23, -40, 33, -40, 31, -30, 21, -30)
+          ag.triangle(31, -50, 29, -40, 23, -40)
+
+          obj.tx += (30 * s) / 50
+        }
+        break
       case "!":
         {
           ag.noStroke()
