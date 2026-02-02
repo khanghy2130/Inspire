@@ -30,6 +30,7 @@ export default class LoadScene {
   cardImages: P5.Image[] = []
 
   hintTextImage!: P5.Image
+  inspireDescImage!: P5.Image
 
   readonly SUBJECT_COLORS: [number, number, number][] = [
     [60, 220, 145], // green
@@ -360,7 +361,28 @@ export default class LoadScene {
       )
     },
 
-    ///   other texts
+    // inspire description (290 x 70)
+    () => {
+      const p5 = this.p5
+      p5.clear()
+      p5.image(this.starImage, 10, 8, 15, 15)
+
+      customFont.render(
+        "   inspire means permanently +5 power,\n+5 more if is completing a project\nthis turn. the star icon appears on\nthose who would be inspired.",
+        3,
+        13,
+        9,
+        p5.color(250),
+        p5,
+      )
+
+      this.inspireDescImage = p5.get(
+        0,
+        0,
+        (p5.width / 600) * 290,
+        (p5.width / 600) * 70,
+      )
+    },
   ]
 
   constructor(gameClient: GameClient) {

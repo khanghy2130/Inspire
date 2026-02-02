@@ -1404,6 +1404,7 @@ export default class PlayScene {
           )
           break
       }
+      p5.image(loadScene.inspireDescImage, 445, 82, 290, 70)
     },
   }
 
