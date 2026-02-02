@@ -114,6 +114,7 @@ type ProjectController = {
   renderLaser: () => void
 }
 
+type SortType = "POWER" | "BODY" | "GENDER" | "NAME" | "SUBJECT" | "ABILITY"
 type DeckController = {
   cards: Record<
     "drawPile" | "discardPile" | "hand" | "selectedCards",
@@ -124,6 +125,28 @@ type DeckController = {
   isDrawing: boolean
   flyers: number[] // prg[]
   displayPileCount: number
+
+  inspectModal: {
+    drawPileOutlinePrg: number
+    bgImage?: P5.Image
+    isOpening: boolean
+    openingPrg: number // goes both way; conditioner (modal if >0) (modal input if =1)
+    isShowingFullDeck: boolean
+    mainSortType: SortType
+
+    inspectCards: {
+      pc: PlayingCard
+      isVisible: boolean // control flipPrg, affected by isShowingFullDeck
+      flipPrg: number // negative for delay
+      movePrg: number
+      pos: PositionType
+      prevPos: PositionType
+    }[]
+    openOrClose: () => void
+    setPositions: () => void
+    render: () => void
+  }
+
   startDrawing: (delay: number) => void
   // render draw pile & flyers & drawn cards
   renderDrawPile: () => void
@@ -541,6 +564,136 @@ export default class PlayScene {
     isDrawing: false,
     flyers: [],
     displayPileCount: 0,
+
+    inspectModal: {
+      drawPileOutlinePrg: 0,
+      isOpening: false,
+      openingPrg: 0,
+      isShowingFullDeck: false,
+      // mainSortType then SUBJECT, ABILITY, GENDER
+      mainSortType: "SUBJECT",
+      inspectCards: [],
+
+      openOrClose: () => {
+        const inspectModal = this.deckController.inspectModal
+        if (inspectModal.isOpening) {
+          // closing
+          inspectModal.isOpening = false
+          for (
+            let i = 0, visibleIndex = 0;
+            i < inspectModal.inspectCards.length;
+            i++
+          ) {
+            const iCard = inspectModal.inspectCards[i]
+            if (iCard.isVisible) {
+              iCard.isVisible = false
+              iCard.flipPrg = visibleIndex * 0.08
+              visibleIndex++
+            }
+          }
+        } else {
+          // opening
+          inspectModal.isOpening = true
+          inspectModal.openingPrg = 0.001 // make not 0 because that's the condition
+          inspectModal.isShowingFullDeck = false
+          inspectModal.bgImage = this.p5.get(0, 0, this.p5.width, this.p5.width)
+          // set up inspectCards
+          const drawPile = this.deckController.cards.drawPile
+          for (
+            let i = 0, visibleIndex = 0;
+            i < inspectModal.inspectCards.length;
+            i++
+          ) {
+            const iCard = inspectModal.inspectCards[i]
+            iCard.pos = [500, 700] // move to bottom offscreen
+            iCard.isVisible = true || drawPile.includes(iCard.pc)
+            if (iCard.isVisible) {
+              iCard.flipPrg = visibleIndex * -0.1
+              visibleIndex++
+            } else {
+              iCard.flipPrg = 0 // immediately hide the invisible ones
+            }
+          }
+          inspectModal.setPositions()
+        }
+      },
+      setPositions: () => {
+        // set new position to all visible iCards, use selected sort
+        const inspectModal = this.deckController.inspectModal
+        for (
+          let i = 0, visibleIndex = 0;
+          i < inspectModal.inspectCards.length;
+          i++
+        ) {
+          const iCard = inspectModal.inspectCards[i]
+          if (iCard.isVisible) {
+            iCard.prevPos = iCard.pos
+            iCard.movePrg = 0 // trigger move animation
+            iCard.pos = [
+              (visibleIndex % 8) * 55 + 170,
+              Math.floor(visibleIndex / 8) * 120 + 170,
+            ]
+            visibleIndex++
+          }
+        }
+
+        //// also set iCards order to match sorted
+      },
+      render: () => {
+        const p5 = this.p5
+        const inspectModal = this.deckController.inspectModal
+
+        // update openingPrg
+        if (inspectModal.isOpening) {
+          inspectModal.openingPrg = p5.min(inspectModal.openingPrg + 0.04, 1)
+        } else {
+          inspectModal.openingPrg = p5.max(inspectModal.openingPrg - 0.04, 0)
+        }
+        p5.image(inspectModal.bgImage!, 300, 300, 600, 600)
+        // bg
+        p5.noStroke()
+        p5.fill(50, inspectModal.openingPrg * 230)
+        p5.rect(300, 300, 600, 600)
+
+        // buttons area
+        p5.push()
+
+        ////
+
+        p5.pop()
+
+        // render inspect cards
+        const whiteColor = p5.color(255)
+        const blackColor = p5.color(0)
+        for (let i = 0; i < inspectModal.inspectCards.length; i++) {
+          const iCard = inspectModal.inspectCards[i]
+
+          // update flipPrg
+          if (iCard.isVisible) {
+            iCard.flipPrg = p5.min(iCard.flipPrg + 0.1, 1)
+          } else {
+            iCard.flipPrg = p5.max(iCard.flipPrg - 0.1, 0)
+          }
+
+          // actual render
+          if (iCard.flipPrg > 0) {
+            p5.push()
+            p5.translate(iCard.pos[0], iCard.pos[1])
+            // 75% size
+            p5.scale(
+              easeOutCubic(p5.constrain(iCard.flipPrg, 0, 1)) * 0.75,
+              0.75,
+            )
+            p5.image(iCard.pc.imageData, 0, 0, 100, 160)
+            // power
+            customFont.render(iCard.pc.power + "", -33, -40, 22, blackColor, p5)
+            customFont.render(iCard.pc.power + "", -35, -42, 22, whiteColor, p5)
+            p5.pop()
+          }
+        }
+      },
+    },
+
     startDrawing: (delay) => {
       this.deckController.isDrawing = true
       this.deckController.displayPileCount = 0
@@ -549,6 +702,7 @@ export default class PlayScene {
     },
     renderDrawPile: () => {
       const p5 = this.p5
+      const { mx, my } = this.gc
       const cardBackside = this.loadScene.cardBackside
       const deckController = this.deckController
       const cards = deckController.cards
@@ -581,6 +735,31 @@ export default class PlayScene {
           }
         }
       }
+
+      // increare drawPileOutlinePrg (if actionable & hovering on draw pile)
+      if (
+        !this.selectController.isNotActionable() &&
+        mx > 480 &&
+        mx < 580 &&
+        my > 100 &&
+        my < 260
+      ) {
+        p5.cursor(p5.HAND)
+        deckController.inspectModal.drawPileOutlinePrg = p5.min(
+          deckController.inspectModal.drawPileOutlinePrg + 0.15,
+          1,
+        )
+      } else {
+        deckController.inspectModal.drawPileOutlinePrg = p5.max(
+          deckController.inspectModal.drawPileOutlinePrg - 0.15,
+          0,
+        )
+      }
+      // render draw pile hovered outline
+      p5.noFill()
+      p5.stroke(250)
+      p5.strokeWeight(deckController.inspectModal.drawPileOutlinePrg * 5)
+      p5.rect(530, 180, 100, 160, 20)
 
       // render draw pile backside
       if (pileCount > 0 || deckController.displayPileCount > 0) {
@@ -1413,22 +1592,29 @@ export default class PlayScene {
   }
 
   setup() {
+    const {
+      projectController,
+      selectController,
+      deckController,
+      statsController,
+    } = this
+
     // reset
     this.screenShakePrg = 1
     this.gameIsOver = false
-    this.statsController.energy = 10
-    this.statsController.completedAmount = 0
+    statsController.energy = 10
+    statsController.completedAmount = 0
 
-    this.projectController.projectMaxHP = 10
-    this.projectController.queue = []
-    this.projectController.hitController.target = null
-    this.projectController.hitController.laser = null
-    this.projectController.hitController.flyer = null
+    projectController.projectMaxHP = 10
+    projectController.queue = []
+    projectController.hitController.target = null
+    projectController.hitController.laser = null
+    projectController.hitController.flyer = null
 
-    this.selectController.selectableCards = []
-    this.selectController.starIndices = []
+    selectController.selectableCards = []
+    selectController.starIndices = []
     for (let i = 0; i < 6; i++) {
-      this.selectController.selectableCards.push({
+      selectController.selectableCards.push({
         isSelected: false,
         outlinePrg: 0,
         moveUpPrg: 0,
@@ -1437,7 +1623,7 @@ export default class PlayScene {
       })
     }
 
-    this.deckController.cards = {
+    deckController.cards = {
       drawPile: [],
       discardPile: [],
       hand: [],
@@ -1445,29 +1631,43 @@ export default class PlayScene {
     }
     // fill discardPile with default cards
     const cardImages = this.loadScene.cardImages
-    this.deckController.cards.discardPile = originalCards.map((oc, index) => ({
+    deckController.cards.discardPile = originalCards.map((oc, index) => ({
       oc,
       power: 5,
       imageData: cardImages[index],
-      squishPrg: 1,
-      flipPrg: 1,
-      spawnPrg: 0,
     }))
+    deckController.inspectModal.inspectCards = deckController.cards.discardPile
+      .slice()
+      .map((pc) => ({
+        pc: pc,
+        isVisible: true,
+        flipPrg: 0,
+        movePrg: 0,
+        pos: [0, 0],
+        prevPos: [0, 0],
+      }))
 
     // add starting projects
     const allSubjectTypes: SubjectType[] = [0, 1, 2, 3]
     while (allSubjectTypes.length > 0) {
-      this.projectController.add(
+      projectController.add(
         allSubjectTypes.splice(this.p5.random() * allSubjectTypes.length, 1)[0],
       )
     }
 
-    this.deckController.startDrawing(20)
+    deckController.startDrawing(20)
   }
 
   draw() {
     const { p5, loadScene, projectController, deckController } = this
     p5.cursor(p5.ARROW)
+
+    // showing draw pile modal
+    if (deckController.inspectModal.openingPrg > 0) {
+      deckController.inspectModal.render()
+      return
+    }
+
     p5.image(loadScene.backgroundImage, 300, 300, 600, 600)
 
     p5.push()
@@ -1521,6 +1721,17 @@ export default class PlayScene {
     if (selectController.isNotActionable()) {
       return
     }
+    const { mx, my } = this.gc
+
+    // is showing draw pile modal?
+    const inspectModal = this.deckController.inspectModal
+    if (inspectModal.openingPrg > 0) {
+      // is modal-actionable?
+      if (inspectModal.openingPrg === 1) {
+        inspectModal.openOrClose()
+      }
+      return
+    }
 
     // selecting a card
     if (selectController.hoveredIndex !== null) {
@@ -1545,6 +1756,11 @@ export default class PlayScene {
       assignBtn.clicked()
     } else if (selectedCount > 1 && discardBtn.isHovered) {
       discardBtn.clicked()
+    }
+
+    // clicking draw pile
+    if (mx > 480 && mx < 580 && my > 100 && my < 260) {
+      this.deckController.inspectModal.openOrClose()
     }
   }
 }
