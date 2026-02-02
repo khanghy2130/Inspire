@@ -145,6 +145,56 @@ export default class GameClient {
               p5.color(200, 60, 60),
               playScene.selectController.discardClicked,
             ],
+            [
+              80,
+              40,
+              120,
+              50,
+              "back",
+              15,
+              p5.color(200, 60, 60),
+              () => {
+                playScene.deckController.inspectModal.openOrClose()
+              },
+            ],
+            [
+              280,
+              45,
+              180,
+              60,
+              "full",
+              18,
+              p5.color(204, 124, 18),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                const inspectCards = inspectModal.inspectCards
+                for (let i = 0; i < inspectCards.length; i++) {
+                  inspectCards[i].isVisible = true
+                }
+                inspectModal.setPositions()
+                inspectModal.isShowingFullDeck = true
+              },
+            ],
+            [
+              480,
+              45,
+              180,
+              60,
+              "remaining",
+              18,
+              p5.color(204, 124, 18),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                const inspectCards = inspectModal.inspectCards
+                const drawPile = playScene.deckController.cards.drawPile
+                for (let i = 0; i < inspectCards.length; i++) {
+                  const iCard = inspectCards[i]
+                  iCard.isVisible = drawPile.includes(iCard.pc)
+                }
+                inspectModal.setPositions()
+                inspectModal.isShowingFullDeck = false
+              },
+            ],
           ] as [
             number,
             number,

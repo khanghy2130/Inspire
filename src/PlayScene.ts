@@ -571,7 +571,7 @@ export default class PlayScene {
       openingPrg: 0,
       isShowingFullDeck: false,
       // mainSortType then SUBJECT, ABILITY, GENDER
-      mainSortType: "SUBJECT",
+      mainSortType: "NAME",
       inspectCards: [],
 
       openOrClose: () => {
@@ -587,7 +587,7 @@ export default class PlayScene {
             const iCard = inspectModal.inspectCards[i]
             if (iCard.isVisible) {
               iCard.isVisible = false
-              iCard.flipPrg = visibleIndex * 0.08
+              iCard.flipPrg = visibleIndex * 0.06
               visibleIndex++
             }
           }
@@ -599,27 +599,101 @@ export default class PlayScene {
           inspectModal.bgImage = this.p5.get(0, 0, this.p5.width, this.p5.width)
           // set up inspectCards
           const drawPile = this.deckController.cards.drawPile
+          const inspectCards = inspectModal.inspectCards
+          for (let i = 0; i < inspectCards.length; i++) {
+            const iCard = inspectCards[i]
+            iCard.pos = [500, 750] // move to bottom offscreen
+            iCard.movePrg = 0
+            iCard.isVisible = drawPile.includes(iCard.pc)
+          }
+          inspectModal.setPositions()
+
+          // set flipPrg
           for (
             let i = 0, visibleIndex = 0;
             i < inspectModal.inspectCards.length;
             i++
           ) {
             const iCard = inspectModal.inspectCards[i]
-            iCard.pos = [500, 700] // move to bottom offscreen
-            iCard.isVisible = true || drawPile.includes(iCard.pc)
             if (iCard.isVisible) {
-              iCard.flipPrg = visibleIndex * -0.1
+              iCard.flipPrg = visibleIndex * -0.15
               visibleIndex++
             } else {
               iCard.flipPrg = 0 // immediately hide the invisible ones
             }
           }
-          inspectModal.setPositions()
+
+          // reset close button hover prg
+          this.gc.buttons[3].prg = 1
         }
       },
       setPositions: () => {
-        // set new position to all visible iCards, use selected sort
         const inspectModal = this.deckController.inspectModal
+        const sortOrder: SortType[] = ["SUBJECT", "ABILITY", "GENDER"]
+        // remove duplicate
+        if (sortOrder.includes(inspectModal.mainSortType)) {
+          sortOrder.splice(sortOrder.indexOf(inspectModal.mainSortType), 1)
+        }
+        sortOrder.unshift(inspectModal.mainSortType)
+
+        // sort iCards
+        inspectModal.inspectCards.sort((a, b) => {
+          const aoc = a.pc.oc
+          const boc = b.pc.oc
+          for (const sortType of sortOrder) {
+            if (sortType === "SUBJECT") {
+              if (aoc.subject < boc.subject) {
+                return -1
+              }
+              if (aoc.subject > boc.subject) {
+                return 1
+              }
+            }
+            if (sortType === "ABILITY") {
+              if (aoc.ability < boc.ability) {
+                return -1
+              }
+              if (aoc.ability > boc.ability) {
+                return 1
+              }
+            }
+            if (sortType === "GENDER") {
+              if (!aoc.isMale && boc.isMale) {
+                return -1
+              }
+              if (aoc.isMale && !boc.isMale) {
+                return 1
+              }
+            }
+            if (sortType === "NAME") {
+              if (aoc.name < boc.name) {
+                return -1
+              }
+              if (aoc.name > boc.name) {
+                return 1
+              }
+            }
+            if (sortType === "BODY") {
+              if (aoc.body < boc.body) {
+                return -1
+              }
+              if (aoc.body > boc.body) {
+                return 1
+              }
+            }
+            if (sortType === "POWER") {
+              if (a.pc.power < b.pc.power) {
+                return -1
+              }
+              if (a.pc.power > b.pc.power) {
+                return 1
+              }
+            }
+          }
+          return 0
+        })
+
+        // set new position to all iCards
         for (
           let i = 0, visibleIndex = 0;
           i < inspectModal.inspectCards.length;
@@ -629,15 +703,18 @@ export default class PlayScene {
           if (iCard.isVisible) {
             iCard.prevPos = iCard.pos
             iCard.movePrg = 0 // trigger move animation
+
             iCard.pos = [
               (visibleIndex % 8) * 55 + 170,
               Math.floor(visibleIndex / 8) * 120 + 170,
             ]
             visibleIndex++
+          } else {
+            iCard.movePrg = 0
+            iCard.prevPos = iCard.pos
+            iCard.pos = [500, 750]
           }
         }
-
-        //// also set iCards order to match sorted
       },
       render: () => {
         const p5 = this.p5
@@ -645,20 +722,33 @@ export default class PlayScene {
 
         // update openingPrg
         if (inspectModal.isOpening) {
-          inspectModal.openingPrg = p5.min(inspectModal.openingPrg + 0.04, 1)
+          inspectModal.openingPrg = p5.min(inspectModal.openingPrg + 0.03, 1)
         } else {
-          inspectModal.openingPrg = p5.max(inspectModal.openingPrg - 0.04, 0)
+          inspectModal.openingPrg = p5.max(inspectModal.openingPrg - 0.03, 0)
         }
         p5.image(inspectModal.bgImage!, 300, 300, 600, 600)
         // bg
         p5.noStroke()
-        p5.fill(50, inspectModal.openingPrg * 230)
+        p5.fill(50, inspectModal.openingPrg * 230) /////
         p5.rect(300, 300, 600, 600)
 
         // buttons area
+        const buttons = this.gc.buttons
+        const { mx, my } = this.gc
         p5.push()
+        const easedPrg = 1 - easeOutCubic(inspectModal.openingPrg)
+        p5.translate(easedPrg * -200, easedPrg * -200)
 
-        ////
+        buttons[3].render(mx, my) // back
+        buttons[4].render(mx, my) // full
+        buttons[5].render(mx, my) // remaining
+
+        // keep visible type button selected
+        if (inspectModal.isShowingFullDeck) {
+          buttons[4].prg = p5.min(buttons[4].prg, 0.6)
+        } else {
+          buttons[5].prg = p5.min(buttons[5].prg, 0.6)
+        }
 
         p5.pop()
 
@@ -670,15 +760,22 @@ export default class PlayScene {
 
           // update flipPrg
           if (iCard.isVisible) {
-            iCard.flipPrg = p5.min(iCard.flipPrg + 0.1, 1)
+            iCard.flipPrg = p5.min(iCard.flipPrg + 0.07, 1)
           } else {
-            iCard.flipPrg = p5.max(iCard.flipPrg - 0.1, 0)
+            iCard.flipPrg = p5.max(iCard.flipPrg - 0.07, 0)
           }
+
+          // update movePrg
+          iCard.movePrg = p5.min(iCard.movePrg + 0.025, 1)
 
           // actual render
           if (iCard.flipPrg > 0) {
             p5.push()
-            p5.translate(iCard.pos[0], iCard.pos[1])
+            const easedMovePrg = easeOutCubic(iCard.movePrg)
+            p5.translate(
+              p5.map(easedMovePrg, 0, 1, iCard.prevPos[0], iCard.pos[0]),
+              p5.map(easedMovePrg, 0, 1, iCard.prevPos[1], iCard.pos[1]),
+            )
             // 75% size
             p5.scale(
               easeOutCubic(p5.constrain(iCard.flipPrg, 0, 1)) * 0.75,
@@ -771,7 +868,7 @@ export default class PlayScene {
       const whiteColor = p5.color(255)
       const blackColor = p5.color(0)
       for (let di = 0; di < deckController.drawPrgs.length; di++) {
-        deckController.drawPrgs[di] += 0.017
+        deckController.drawPrgs[di] += 0.017 * 4 ////
         const prg = deckController.drawPrgs[di]
 
         const handIndex =
@@ -1722,13 +1819,22 @@ export default class PlayScene {
       return
     }
     const { mx, my } = this.gc
+    const buttons = this.gc.buttons
 
     // is showing draw pile modal?
     const inspectModal = this.deckController.inspectModal
     if (inspectModal.openingPrg > 0) {
       // is modal-actionable?
       if (inspectModal.openingPrg === 1) {
-        inspectModal.openOrClose()
+        if (buttons[3].isHovered) {
+          buttons[3].clicked()
+        } else if (buttons[4].isHovered) {
+          buttons[4].clicked()
+        } else if (buttons[5].isHovered) {
+          buttons[5].clicked()
+        } else if (buttons[3].isHovered) {
+          buttons[3].clicked()
+        } ////
       }
       return
     }
@@ -1750,12 +1856,10 @@ export default class PlayScene {
         selectedCount++
       }
     }
-    let assignBtn = this.gc.buttons[1]
-    let discardBtn = this.gc.buttons[2]
-    if (selectedCount === 1 && assignBtn.isHovered) {
-      assignBtn.clicked()
-    } else if (selectedCount > 1 && discardBtn.isHovered) {
-      discardBtn.clicked()
+    if (selectedCount === 1 && buttons[1].isHovered) {
+      buttons[1].clicked() // assign
+    } else if (selectedCount > 1 && buttons[2].isHovered) {
+      buttons[2].clicked() // discard
     }
 
     // clicking draw pile
