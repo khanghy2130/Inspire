@@ -21,7 +21,6 @@ declare global {
 export function easeInOutBack(x: number): number {
   const c1 = 1.70158
   const c2 = c1 * 1.525
-
   return x < 0.5
     ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2
     : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2
@@ -30,7 +29,6 @@ export function easeInOutBack(x: number): number {
 export function easeOutBack(x: number): number {
   const c1 = 1.70158
   const c3 = c1 + 1
-
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
 }
 
@@ -112,11 +110,11 @@ export default class GameClient {
 
         endScene.p5 = p5
         endScene.loadScene = loadScene
-        endScene.playScene = playScene
         endScene.sceneController = sceneController
 
         sceneController.p5 = p5
         sceneController.playScene = playScene
+        sceneController.endScene = endScene
 
         // create all buttons
         this.buttons = (

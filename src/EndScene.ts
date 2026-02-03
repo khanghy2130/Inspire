@@ -9,8 +9,10 @@ export default class EndScene {
   gc: GameClient
   p5!: P5
   loadScene!: LoadScene
-  playScene!: PlayScene
   sceneController!: SceneController
+
+  completedAmount: number = 0
+  inspectCards: PlayScene["deckController"]["inspectModal"]["inspectCards"] = []
 
   constructor(gameClient: GameClient) {
     this.gc = gameClient

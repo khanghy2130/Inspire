@@ -1,11 +1,13 @@
 import type P5 from "p5"
 import PlayScene from "./PlayScene"
+import EndScene from "./EndScene"
 
 type Scene = "LOAD" | "MENU" | "PLAY" | "END"
 
 export default class SceneController {
   p5!: P5
   playScene!: PlayScene
+  endScene!: EndScene
   scene: Scene = "LOAD"
   targetScene: Scene = "LOAD"
   prg: number = 2 // 0 to 1: closing; 1 to 2: opening; no input allowed if < 2
@@ -13,12 +15,20 @@ export default class SceneController {
   constructor() {}
 
   public setScene(s: Scene) {
+    if (!this.isNotTransitioning()) {
+      return
+    }
     this.targetScene = s
     this.prg = 0
 
     // set up specific scenes
     if (s === "PLAY") {
       this.playScene.setup()
+    } else if (s === "END") {
+      this.endScene.inspectCards =
+        this.playScene.deckController.inspectModal.inspectCards
+      this.endScene.completedAmount =
+        this.playScene.statsController.completedAmount
     }
   }
 

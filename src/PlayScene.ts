@@ -180,6 +180,16 @@ export default class PlayScene {
   loadScene!: LoadScene
   sceneController!: SceneController
 
+  ender: {
+    isActive: boolean
+    prg: number
+    hasWon: boolean
+  } = {
+    isActive: false,
+    prg: 0,
+    hasWon: false,
+  }
+
   isHintingAtHelp: boolean = true
   screenShakePrg: number = 1
   screenShakeStrength: number = 0
@@ -190,23 +200,88 @@ export default class PlayScene {
       this.statsController.completedAmount === 20
     )
   }
-  checkGoToEndScene: () => void = () => {
-    if (this.checkGameIsOver() && this.sceneController.isNotTransitioning()) {
-      // everything else is done?
-      const isNotActionableExceptGameOver =
-        this.projectController.hitController.target ||
-        this.projectController.hitController.laser ||
-        this.projectController.queue[this.projectController.queue.length - 1]
-          .spawnPrg < 2 ||
-        this.deckController.isDrawing ||
-        this.deckController.drawPrgs.length !== 0 ||
-        this.selectController.discardPrg !== null ||
-        this.selectController.assignInfo ||
-        this.selectController.inspireInfo ||
-        this.tutorialController.isOpened ||
-        this.tutorialController.movePrg < 1
-      if (!isNotActionableExceptGameOver) {
-        this.sceneController.setScene("MENU")
+  renderEnder: () => void = () => {
+    if (this.checkGameIsOver()) {
+      const ender = this.ender
+      // render ender
+      if (ender.isActive) {
+        const p5 = this.p5
+        ender.prg = p5.min(ender.prg + 0.005, 1)
+
+        let x = p5.min(ender.prg * 1.5, 1)
+        const n1 = 7.5625
+        const d1 = 2.75
+        let calculatedY = 0
+        if (x < 1 / d1) {
+          calculatedY = n1 * x * x
+        } else if (x < 2 / d1) {
+          calculatedY = n1 * (x -= 1.5 / d1) * x + 0.75
+        } else if (x < 2.5 / d1) {
+          calculatedY = n1 * (x -= 2.25 / d1) * x + 0.9375
+        } else {
+          calculatedY = n1 * (x -= 2.625 / d1) * x + 0.984375
+        }
+
+        if (ender.hasWon) {
+          customFont.render(
+            "you did it!!!",
+            55,
+            -15 + 300 * calculatedY,
+            50,
+            p5.color(0),
+            p5,
+          )
+          customFont.render(
+            "you did it!!!",
+            50,
+            -20 + 300 * calculatedY,
+            50,
+            p5.color(237, 218, 12),
+            p5,
+          )
+        } else {
+          customFont.render(
+            "out of energy",
+            55,
+            -15 + 300 * calculatedY,
+            45,
+            p5.color(0),
+            p5,
+          )
+          customFont.render(
+            "out of energy",
+            50,
+            -20 + 300 * calculatedY,
+            45,
+            p5.color(250, 90, 90),
+            p5,
+          )
+        }
+
+        // transition check
+        if (ender.prg === 1) {
+          this.sceneController.setScene("END")
+        }
+      }
+      // check to activate ender once other stuffs are done
+      else {
+        const isNotActionableExceptGameOver =
+          this.projectController.hitController.target ||
+          this.projectController.hitController.laser ||
+          this.projectController.queue[this.projectController.queue.length - 1]
+            .spawnPrg < 2 ||
+          this.deckController.isDrawing ||
+          this.deckController.drawPrgs.length !== 0 ||
+          this.selectController.discardPrg !== null ||
+          this.selectController.assignInfo ||
+          this.selectController.inspireInfo ||
+          this.tutorialController.isOpened ||
+          this.tutorialController.movePrg < 1
+        if (!isNotActionableExceptGameOver) {
+          this.ender.isActive = true
+          this.ender.hasWon = this.statsController.completedAmount === 20
+          this.ender.prg = 0
+        }
       }
     }
   }
@@ -1914,7 +1989,8 @@ export default class PlayScene {
     this.screenShakePrg = 1
     this.gameIsOver = false
     statsController.energy = 0
-    statsController.completedAmount = 4 ///
+    statsController.completedAmount = 20 ///
+    this.ender.isActive = false
 
     projectController.projectMaxHP = 10
     projectController.queue = []
@@ -1988,7 +2064,7 @@ export default class PlayScene {
       const f =
         Math.sin(this.screenShakePrg * Math.PI * 4) *
         Math.pow(1 - this.screenShakePrg, 2)
-      p5.translate(0, f * this.screenShakeStrength * -25)
+      p5.translate(0, f * this.screenShakeStrength * -30)
     }
 
     this.selectController.renderControlSection()
@@ -2007,7 +2083,7 @@ export default class PlayScene {
     p5.pop()
 
     this.tutorialController.render()
-    this.checkGoToEndScene()
+    this.renderEnder()
   }
 
   // keyReleased() {
