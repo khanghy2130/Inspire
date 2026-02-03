@@ -558,6 +558,7 @@ export default class PlayScene {
 
       this.screenShakePrg = 0 // trigger screen shake
       this.screenShakeStrength = hitAmount / project.maxHp
+      //@ damage
     },
     renderProjects: () => {
       const p5 = this.p5
@@ -792,6 +793,7 @@ export default class PlayScene {
         statsController.energy += 3 + (laser.isPerfect ? 1 : 0)
         statsController.completedAmount++
         statsController.bouncePrg = 0
+        //@ gain
       }
 
       const [x, y, w, h, a1, a2] = laser.arcInfo
@@ -1394,6 +1396,7 @@ export default class PlayScene {
           inspireInfo.prg = 0
           if (inspireInfo.state === "laser") {
             inspireInfo.state = "taker"
+            //@ gain
           } else if (inspireInfo.state === "taker") {
             selectController.inspireInfo = null
             inspireInfo = null // clear local as well
@@ -2101,8 +2104,10 @@ export default class PlayScene {
       if (tutorialController.movePrg === 1) {
         if (buttons[12].isHovered) {
           buttons[12].clicked()
+          //@
         } else if (buttons[13].isHovered) {
           buttons[13].clicked()
+          //@
         }
       }
       return
@@ -2122,6 +2127,7 @@ export default class PlayScene {
         for (let i = 3; i < 11; i++) {
           if (buttons[i].isHovered) {
             buttons[i].clicked()
+            //@
             return
           }
         }
@@ -2136,6 +2142,7 @@ export default class PlayScene {
       ].isSelected =
         !selectController.selectableCards[selectController.hoveredIndex]
           .isSelected
+      //@
       return
     }
 
@@ -2149,22 +2156,26 @@ export default class PlayScene {
     if (selectedCount === 1 && buttons[1].isHovered) {
       buttons[1].clicked() // assign
       this.isHintingAtHelp = false
+      //@
       return
     } else if (selectedCount > 1 && buttons[2].isHovered) {
       buttons[2].clicked() // discard
       this.isHintingAtHelp = false
+      //@
       return
     }
 
     // clicking draw pile
     if (mx > 480 && mx < 580 && my > 100 && my < 260) {
       this.deckController.inspectModal.openOrClose()
+      //@
       return
     }
 
     // clicking help button
     if (buttons[11].isHovered) {
       buttons[11].clicked()
+      //@
       return
     }
   }

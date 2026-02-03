@@ -70,6 +70,9 @@ export default class MenuScene {
       return
     }
     const gc = this.gc
-    if (gc.buttons[0].isHovered) gc.buttons[0].clicked()
+    if (gc.buttons[0].isHovered) {
+      gc.buttons[0].clicked()
+      //@
+    }
   }
 }

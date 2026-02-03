@@ -25,10 +25,16 @@ export default class SceneController {
     if (s === "PLAY") {
       this.playScene.setup()
     } else if (s === "END") {
-      this.endScene.inspectCards =
-        this.playScene.deckController.inspectModal.inspectCards
-      this.endScene.completedAmount =
-        this.playScene.statsController.completedAmount
+      const es = this.endScene
+      es.displayCounter = 0
+      es.afterCountPrg = 0
+      es.countDelay = 100
+      es.numBouncePrg = 1
+      es.magnets = []
+      es.inspectCards = this.playScene.deckController.inspectModal.inspectCards
+      es.completedAmount = this.playScene.statsController.completedAmount
+      ////
+      es.completedAmount = 10
     }
   }
 

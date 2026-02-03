@@ -795,7 +795,7 @@ export default class LoadScene {
     }
 
     // all done
-    this.sceneController.setScene("PLAY")
+    this.sceneController.setScene("END")
   }
 
   public draw() {
