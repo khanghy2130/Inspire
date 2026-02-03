@@ -571,7 +571,7 @@ export default class PlayScene {
       openingPrg: 0,
       isShowingFullDeck: false,
       // mainSortType then SUBJECT, ABILITY, GENDER
-      mainSortType: "NAME",
+      mainSortType: "SUBJECT",
       inspectCards: [],
 
       openOrClose: () => {
@@ -616,7 +616,7 @@ export default class PlayScene {
           ) {
             const iCard = inspectModal.inspectCards[i]
             if (iCard.isVisible) {
-              iCard.flipPrg = visibleIndex * -0.15
+              iCard.flipPrg = visibleIndex * -0.12
               visibleIndex++
             } else {
               iCard.flipPrg = 0 // immediately hide the invisible ones
@@ -682,10 +682,10 @@ export default class PlayScene {
               }
             }
             if (sortType === "POWER") {
-              if (a.pc.power < b.pc.power) {
+              if (a.pc.power > b.pc.power) {
                 return -1
               }
-              if (a.pc.power > b.pc.power) {
+              if (a.pc.power < b.pc.power) {
                 return 1
               }
             }
@@ -729,7 +729,7 @@ export default class PlayScene {
         p5.image(inspectModal.bgImage!, 300, 300, 600, 600)
         // bg
         p5.noStroke()
-        p5.fill(50, inspectModal.openingPrg * 230) /////
+        p5.fill(0, inspectModal.openingPrg * 230)
         p5.rect(300, 300, 600, 600)
 
         // buttons area
@@ -743,11 +743,31 @@ export default class PlayScene {
         buttons[4].render(mx, my) // full
         buttons[5].render(mx, my) // remaining
 
-        // keep visible type button selected
+        // keep select visible type button outline
         if (inspectModal.isShowingFullDeck) {
           buttons[4].prg = p5.min(buttons[4].prg, 0.6)
         } else {
           buttons[5].prg = p5.min(buttons[5].prg, 0.6)
+        }
+
+        customFont.render("sort by:", 12, 130, 12, p5.color(250), p5)
+        buttons[6].render(mx, my) // power
+        buttons[7].render(mx, my) // ability
+        buttons[8].render(mx, my) // subject
+        buttons[9].render(mx, my) // name
+        buttons[10].render(mx, my) // body
+
+        // keep selected main sort type button outline
+        if (inspectModal.mainSortType === "POWER") {
+          buttons[6].prg = p5.min(buttons[6].prg, 0.6)
+        } else if (inspectModal.mainSortType === "ABILITY") {
+          buttons[7].prg = p5.min(buttons[7].prg, 0.6)
+        } else if (inspectModal.mainSortType === "SUBJECT") {
+          buttons[8].prg = p5.min(buttons[8].prg, 0.6)
+        } else if (inspectModal.mainSortType === "NAME") {
+          buttons[9].prg = p5.min(buttons[9].prg, 0.6)
+        } else if (inspectModal.mainSortType === "BODY") {
+          buttons[10].prg = p5.min(buttons[10].prg, 0.6)
         }
 
         p5.pop()
@@ -766,7 +786,7 @@ export default class PlayScene {
           }
 
           // update movePrg
-          iCard.movePrg = p5.min(iCard.movePrg + 0.025, 1)
+          iCard.movePrg = p5.min(iCard.movePrg + 0.03, 1)
 
           // actual render
           if (iCard.flipPrg > 0) {
@@ -868,7 +888,7 @@ export default class PlayScene {
       const whiteColor = p5.color(255)
       const blackColor = p5.color(0)
       for (let di = 0; di < deckController.drawPrgs.length; di++) {
-        deckController.drawPrgs[di] += 0.017 * 4 ////
+        deckController.drawPrgs[di] += 0.017
         const prg = deckController.drawPrgs[di]
 
         const handIndex =
@@ -900,7 +920,6 @@ export default class PlayScene {
           p5.translate(x, y)
           p5.scale(p5.map(flipPrg, 0.75, 1, 0, 1), 1)
           p5.image(card.imageData, 0, 0, 100, 160)
-          /// also render power
           customFont.render(card.power + "", -33, -40, 22, blackColor, p5)
           customFont.render(card.power + "", -35, -42, 22, whiteColor, p5)
           p5.pop()
@@ -1826,15 +1845,13 @@ export default class PlayScene {
     if (inspectModal.openingPrg > 0) {
       // is modal-actionable?
       if (inspectModal.openingPrg === 1) {
-        if (buttons[3].isHovered) {
-          buttons[3].clicked()
-        } else if (buttons[4].isHovered) {
-          buttons[4].clicked()
-        } else if (buttons[5].isHovered) {
-          buttons[5].clicked()
-        } else if (buttons[3].isHovered) {
-          buttons[3].clicked()
-        } ////
+        // all buttons in pile modal
+        for (let i = 3; i < 11; i++) {
+          if (buttons[i].isHovered) {
+            buttons[i].clicked()
+            return
+          }
+        }
       }
       return
     }

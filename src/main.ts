@@ -146,11 +146,11 @@ export default class GameClient {
               playScene.selectController.discardClicked,
             ],
             [
-              80,
+              70,
               40,
               120,
-              50,
-              "back",
+              40,
+              "close",
               15,
               p5.color(200, 60, 60),
               () => {
@@ -161,7 +161,7 @@ export default class GameClient {
               280,
               45,
               180,
-              60,
+              50,
               "full",
               18,
               p5.color(204, 124, 18),
@@ -179,7 +179,7 @@ export default class GameClient {
               480,
               45,
               180,
-              60,
+              50,
               "remaining",
               18,
               p5.color(204, 124, 18),
@@ -193,6 +193,77 @@ export default class GameClient {
                 }
                 inspectModal.setPositions()
                 inspectModal.isShowingFullDeck = false
+              },
+            ],
+
+            [
+              65,
+              170,
+              110,
+              35,
+              "power",
+              12,
+              p5.color(200, 33, 140),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                inspectModal.mainSortType = "POWER"
+                inspectModal.setPositions()
+              },
+            ],
+            [
+              65,
+              220,
+              110,
+              35,
+              "ability",
+              12,
+              p5.color(200, 33, 140),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                inspectModal.mainSortType = "ABILITY"
+                inspectModal.setPositions()
+              },
+            ],
+            [
+              65,
+              270,
+              110,
+              35,
+              "color",
+              12,
+              p5.color(200, 33, 140),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                inspectModal.mainSortType = "SUBJECT"
+                inspectModal.setPositions()
+              },
+            ],
+            [
+              65,
+              320,
+              110,
+              35,
+              "name",
+              12,
+              p5.color(200, 33, 140),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                inspectModal.mainSortType = "NAME"
+                inspectModal.setPositions()
+              },
+            ],
+            [
+              65,
+              370,
+              110,
+              35,
+              "body",
+              12,
+              p5.color(200, 33, 140),
+              () => {
+                const inspectModal = playScene.deckController.inspectModal
+                inspectModal.mainSortType = "BODY"
+                inspectModal.setPositions()
               },
             ],
           ] as [

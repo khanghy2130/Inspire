@@ -84,11 +84,11 @@ export default class Button {
     p5.fill(this.c2)
     p5.rect(this.x, this.y + this.h / 4, this.w, this.h / 2, 0, 0, 15, 15)
 
-    const f = 1 - this.prg
-    p5.strokeWeight(f * 7)
+    // render outline
+    p5.strokeWeight((1 - this.prg) * 7)
     p5.noFill()
     p5.stroke(250)
-    p5.rect(this.x, this.y, this.w, this.h, 15)
+    p5.rect(this.x, this.y, this.w, this.h, 12)
 
     customFont.render(
       this.str,
