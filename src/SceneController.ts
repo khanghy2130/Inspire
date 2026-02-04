@@ -33,8 +33,6 @@ export default class SceneController {
       es.magnets = []
       es.inspectCards = this.playScene.deckController.inspectModal.inspectCards
       es.completedAmount = this.playScene.statsController.completedAmount
-      ////
-      es.completedAmount = 10
     }
   }
 

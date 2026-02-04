@@ -110,6 +110,7 @@ export default class GameClient {
 
         endScene.p5 = p5
         endScene.loadScene = loadScene
+        endScene.playScene = playScene
         endScene.sceneController = sceneController
 
         sceneController.p5 = p5
@@ -173,12 +174,14 @@ export default class GameClient {
               p5.color(200, 120, 20),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                const inspectCards = inspectModal.inspectCards
-                for (let i = 0; i < inspectCards.length; i++) {
-                  inspectCards[i].isVisible = true
+                if (!inspectModal.isShowingFullDeck) {
+                  const inspectCards = inspectModal.inspectCards
+                  for (let i = 0; i < inspectCards.length; i++) {
+                    inspectCards[i].isVisible = true
+                  }
+                  inspectModal.setPositions()
+                  inspectModal.isShowingFullDeck = true
                 }
-                inspectModal.setPositions()
-                inspectModal.isShowingFullDeck = true
               },
             ],
             [
@@ -191,14 +194,16 @@ export default class GameClient {
               p5.color(200, 120, 20),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                const inspectCards = inspectModal.inspectCards
-                const drawPile = playScene.deckController.cards.drawPile
-                for (let i = 0; i < inspectCards.length; i++) {
-                  const iCard = inspectCards[i]
-                  iCard.isVisible = drawPile.includes(iCard.pc)
+                if (inspectModal.isShowingFullDeck) {
+                  const inspectCards = inspectModal.inspectCards
+                  const drawPile = playScene.deckController.cards.drawPile
+                  for (let i = 0; i < inspectCards.length; i++) {
+                    const iCard = inspectCards[i]
+                    iCard.isVisible = drawPile.includes(iCard.pc)
+                  }
+                  inspectModal.setPositions()
+                  inspectModal.isShowingFullDeck = false
                 }
-                inspectModal.setPositions()
-                inspectModal.isShowingFullDeck = false
               },
             ],
 
@@ -212,8 +217,10 @@ export default class GameClient {
               p5.color(200, 33, 140),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                inspectModal.mainSortType = "POWER"
-                inspectModal.setPositions()
+                if (inspectModal.mainSortType !== "POWER") {
+                  inspectModal.mainSortType = "POWER"
+                  inspectModal.setPositions()
+                }
               },
             ],
             [
@@ -226,8 +233,10 @@ export default class GameClient {
               p5.color(200, 33, 140),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                inspectModal.mainSortType = "ABILITY"
-                inspectModal.setPositions()
+                if (inspectModal.mainSortType !== "ABILITY") {
+                  inspectModal.mainSortType = "ABILITY"
+                  inspectModal.setPositions()
+                }
               },
             ],
             [
@@ -240,8 +249,10 @@ export default class GameClient {
               p5.color(200, 33, 140),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                inspectModal.mainSortType = "SUBJECT"
-                inspectModal.setPositions()
+                if (inspectModal.mainSortType !== "SUBJECT") {
+                  inspectModal.mainSortType = "SUBJECT"
+                  inspectModal.setPositions()
+                }
               },
             ],
             [
@@ -254,8 +265,10 @@ export default class GameClient {
               p5.color(200, 33, 140),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                inspectModal.mainSortType = "NAME"
-                inspectModal.setPositions()
+                if (inspectModal.mainSortType !== "NAME") {
+                  inspectModal.mainSortType = "NAME"
+                  inspectModal.setPositions()
+                }
               },
             ],
             [
@@ -268,8 +281,10 @@ export default class GameClient {
               p5.color(200, 33, 140),
               () => {
                 const inspectModal = playScene.deckController.inspectModal
-                inspectModal.mainSortType = "BODY"
-                inspectModal.setPositions()
+                if (inspectModal.mainSortType !== "BODY") {
+                  inspectModal.mainSortType = "BODY"
+                  inspectModal.setPositions()
+                }
               },
             ],
             [
@@ -315,6 +330,30 @@ export default class GameClient {
               p5.color(200, 60, 60),
               () => {
                 playScene.tutorialController.setIndex(false)
+              },
+            ],
+            [
+              120,
+              500,
+              150,
+              60,
+              "exit",
+              18,
+              p5.color(200, 60, 60),
+              () => {
+                sceneController.setScene("MENU")
+              },
+            ],
+            [
+              420,
+              500,
+              280,
+              60,
+              "view students",
+              18,
+              p5.color(60, 122, 222),
+              () => {
+                playScene.deckController.inspectModal.openOrClose(true)
               },
             ],
           ] as [

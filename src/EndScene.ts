@@ -9,6 +9,7 @@ export default class EndScene {
   gc: GameClient
   p5!: P5
   loadScene!: LoadScene
+  playScene!: PlayScene
   sceneController!: SceneController
 
   completedAmount: number = 0
@@ -47,7 +48,10 @@ export default class EndScene {
       this.countDelay = 15 // count speed
       this.numBouncePrg = 0
       this.displayCounter++
-      this.magnets.push([p5.random() * p5.TWO_PI, p5.random() * 0.08 - 0.04])
+      this.magnets.push([
+        p5.random() * p5.TWO_PI,
+        (p5.random() * 0.03 + 0.005) * (p5.random() > 0.5 ? 1 : -1),
+      ])
       //@ gain
     }
 
@@ -63,13 +67,13 @@ export default class EndScene {
     p5.colorMode(p5.HSB)
     p5.push()
     const num = this.displayCounter + ""
-    p5.translate(300, 300)
+    p5.translate(300, 200)
     scaleFactor *= 0.7 // animated range
     p5.scale(0.3 + scaleFactor, 1.7 - scaleFactor)
 
     let numColor = p5.color(0, 0, 255)
     if (this.displayCounter === 20) {
-      numColor = p5.color((p5.frameCount * 0.8) % 255, 255, 250)
+      numColor = p5.color((p5.frameCount * 0.8) % 255, 200, 250)
     }
     customFont.render(
       num,
@@ -90,7 +94,7 @@ export default class EndScene {
 
     // spikes
     p5.strokeWeight(5)
-    const colorShift = p5.frameCount * 0.2
+    const colorShift = p5.frameCount * 0.3
     for (let i = 0; i < p5.TWO_PI; i += p5.TWO_PI / 100) {
       let spikeHeight = 100
       for (let mi = 0; mi < magnets.length; mi++) {
@@ -99,27 +103,71 @@ export default class EndScene {
 
         if (diff < 0.25) {
           // smaller = taller
-          spikeHeight += (1 - diff / 0.25) * 12
+          spikeHeight += (1 - diff / 0.25) * 15
         }
       }
-
-      p5.stroke(((i / p5.TWO_PI) * 255 + colorShift) % 255, 255, 255)
-
       const c = p5.cos(i)
       const s = p5.sin(i)
+      p5.stroke(((i / p5.TWO_PI) * 255 + colorShift) % 255, 220, 255)
       p5.line(
         300 + c * 100,
-        300 + s * 100,
+        200 + s * 100,
         300 + c * spikeHeight,
-        300 + s * spikeHeight,
+        200 + s * spikeHeight,
       )
     }
     p5.colorMode(p5.RGB)
+
+    // render buttons
+    if (this.displayCounter === this.completedAmount) {
+      gc.buttons[14].render(gc.mx, gc.my)
+      gc.buttons[15].render(gc.mx, gc.my)
+    } else {
+      gc.buttons[14].isHovered = false
+      gc.buttons[14].prg = 0
+      gc.buttons[15].isHovered = false
+      gc.buttons[15].prg = 0
+    }
+
+    if (this.playScene.deckController.inspectModal.openingPrg > 0) {
+      this.playScene.deckController.inspectModal.render(true)
+    }
   }
 
   click() {
-    if (!this.sceneController.isNotTransitioning()) {
-      return
+    if (this.sceneController.isNotTransitioning()) {
+      const buttons = this.gc.buttons
+
+      const inspectModal = this.playScene.deckController.inspectModal
+      if (inspectModal.openingPrg > 0) {
+        // is modal-actionable?
+        if (inspectModal.openingPrg === 1) {
+          if (buttons[3].isHovered) {
+            buttons[3].clicked()
+            //@
+            return
+          }
+          // other buttons in pile modal
+          for (let i = 6; i < 11; i++) {
+            if (buttons[i].isHovered) {
+              buttons[i].clicked()
+              //@
+              return
+            }
+          }
+        }
+        return
+      }
+
+      if (buttons[14].isHovered) {
+        buttons[14].clicked()
+        //@
+        return
+      } else if (buttons[15].isHovered) {
+        buttons[15].clicked()
+        //@
+        return
+      }
     }
   }
 }

@@ -73,6 +73,7 @@ export default class MenuScene {
     if (gc.buttons[0].isHovered) {
       gc.buttons[0].clicked()
       //@
+      return
     }
   }
 }

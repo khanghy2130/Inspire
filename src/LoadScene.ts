@@ -795,7 +795,7 @@ export default class LoadScene {
     }
 
     // all done
-    this.sceneController.setScene("END")
+    this.sceneController.setScene("MENU")
   }
 
   public draw() {

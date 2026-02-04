@@ -143,9 +143,9 @@ type DeckController = {
       pos: PositionType
       prevPos: PositionType
     }[]
-    openOrClose: () => void
+    openOrClose: (isEndScene?: boolean) => void
     setPositions: () => void
-    render: () => void
+    render: (isEndScene?: boolean) => void
   }
 
   startDrawing: (delay: number) => void
@@ -236,7 +236,7 @@ export default class PlayScene {
             50,
             -20 + 300 * calculatedY,
             50,
-            p5.color(237, 218, 12),
+            p5.color(240, 240, 12),
             p5,
           )
         } else {
@@ -377,7 +377,7 @@ export default class PlayScene {
         focusInfo: [460, 310, 250, 60],
       },
       {
-        panelY: 450,
+        panelY: 420,
         imageHeight: 100,
         focusInfo: [530, 180, 120, 180],
       },
@@ -439,7 +439,7 @@ export default class PlayScene {
       let isVisible = panelInfo.focusInfo !== undefined
 
       // update movePrg
-      tc.movePrg = p5.min(1, tc.movePrg + 0.02)
+      tc.movePrg = p5.min(1, tc.movePrg + 0.035)
       // update focusRect
       if (isVisible) {
         focusRect.spawnPrg = p5.min(focusRect.spawnPrg + 0.05, 1)
@@ -832,7 +832,7 @@ export default class PlayScene {
       mainSortType: "SUBJECT",
       inspectCards: [],
 
-      openOrClose: () => {
+      openOrClose: (isEndScene) => {
         const inspectModal = this.deckController.inspectModal
         if (inspectModal.isOpening) {
           // closing
@@ -853,16 +853,25 @@ export default class PlayScene {
           // opening
           inspectModal.isOpening = true
           inspectModal.openingPrg = 0.001 // make not 0 because that's the condition
-          inspectModal.isShowingFullDeck = false
+          inspectModal.isShowingFullDeck = isEndScene ? true : false
           inspectModal.bgImage = this.p5.get(0, 0, this.p5.width, this.p5.width)
           // set up inspectCards
-          const drawPile = this.deckController.cards.drawPile
           const inspectCards = inspectModal.inspectCards
-          for (let i = 0; i < inspectCards.length; i++) {
-            const iCard = inspectCards[i]
-            iCard.pos = [500, 750] // move to bottom offscreen
-            iCard.movePrg = 0
-            iCard.isVisible = drawPile.includes(iCard.pc)
+          if (inspectModal.isShowingFullDeck) {
+            for (let i = 0; i < inspectCards.length; i++) {
+              const iCard = inspectCards[i]
+              iCard.pos = [500, 750] // move to bottom offscreen
+              iCard.movePrg = 0
+              iCard.isVisible = true
+            }
+          } else {
+            const drawPile = this.deckController.cards.drawPile
+            for (let i = 0; i < inspectCards.length; i++) {
+              const iCard = inspectCards[i]
+              iCard.pos = [500, 750] // move to bottom offscreen
+              iCard.movePrg = 0
+              iCard.isVisible = drawPile.includes(iCard.pc)
+            }
           }
           inspectModal.setPositions()
 
@@ -974,7 +983,7 @@ export default class PlayScene {
           }
         }
       },
-      render: () => {
+      render: (isEndScene) => {
         const p5 = this.p5
         const inspectModal = this.deckController.inspectModal
 
@@ -984,7 +993,10 @@ export default class PlayScene {
         } else {
           inspectModal.openingPrg = p5.max(inspectModal.openingPrg - 0.03, 0)
         }
-        p5.image(inspectModal.bgImage!, 300, 300, 600, 600)
+
+        if (!isEndScene) {
+          p5.image(inspectModal.bgImage!, 300, 300, 600, 600)
+        }
         // bg
         p5.noStroke()
         p5.fill(0, inspectModal.openingPrg * 230)
@@ -998,8 +1010,10 @@ export default class PlayScene {
         p5.translate(easedPrg * -200, easedPrg * -200)
 
         buttons[3].render(mx, my) // back
-        buttons[4].render(mx, my) // full
-        buttons[5].render(mx, my) // remaining
+        if (!isEndScene) {
+          buttons[4].render(mx, my) // full
+          buttons[5].render(mx, my) // remaining
+        }
 
         // keep select visible type button outline
         if (inspectModal.isShowingFullDeck) {
@@ -1991,8 +2005,8 @@ export default class PlayScene {
     // reset
     this.screenShakePrg = 1
     this.gameIsOver = false
-    statsController.energy = 0
-    statsController.completedAmount = 20 ///
+    statsController.energy = 10
+    statsController.completedAmount = 0
     this.ender.isActive = false
 
     projectController.projectMaxHP = 10
